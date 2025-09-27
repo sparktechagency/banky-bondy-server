@@ -38,6 +38,12 @@ app.use(
             'http://10.10.20.70:3000',
             'https://emilioroo-integration.vercel.app',
             'https://emilioroo-dashboard-integration.vercel.app',
+            'https://bankybondy.com',
+            'http://bankybondy.com',
+            'https://www.bankybondy.com',
+            'http://www.bankybondy.com',
+            'https://admin.bankybondy.com',
+            'http://admin.bankybondy.com',
         ],
         credentials: true,
     })
