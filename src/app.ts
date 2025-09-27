@@ -13,7 +13,7 @@ import router from './app/routes';
 import handleWebhook from './app/stripe/webhook';
 const app: Application = express();
 
-// web hook for stripe---------------
+// web hook for stripe-------------------------
 app.post(
     '/banky-bondy-webhook',
     express.raw({ type: 'application/json' }),
