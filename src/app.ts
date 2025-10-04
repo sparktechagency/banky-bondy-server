@@ -43,6 +43,7 @@ app.use(
         allowedHeaders: ['Content-Type', 'Authorization'],
     })
 );
+//
 app.use('/uploads', express.static('uploads'));
 // application routers ----------------
 app.use('/', router);
