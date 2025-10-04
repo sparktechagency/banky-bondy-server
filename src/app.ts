@@ -24,19 +24,20 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(
     cors({
-        origin: [
-            'http://localhost:5173',
-            'http://localhost:3000',
-            'http://10.10.20.70:3000',
-            'https://emilioroo-integration.vercel.app',
-            'https://emilioroo-dashboard-integration.vercel.app',
-            'https://bankybondy.com',
-            'http://bankybondy.com',
-            'https://www.bankybondy.com',
-            'http://www.bankybondy.com',
-            'https://admin.bankybondy.com',
-            'http://admin.bankybondy.com',
-        ],
+        // origin: [
+        //     'http://localhost:5173',
+        //     'http://localhost:3000',
+        //     'http://10.10.20.70:3000',
+        //     'https://emilioroo-integration.vercel.app',
+        //     'https://emilioroo-dashboard-integration.vercel.app',
+        //     'https://bankybondy.com',
+        //     'http://bankybondy.com',
+        //     'https://www.bankybondy.com',
+        //     'http://www.bankybondy.com',
+        //     'https://admin.bankybondy.com',
+        //     'http://admin.bankybondy.com',
+        // ],
+        origin: '*',
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization'],

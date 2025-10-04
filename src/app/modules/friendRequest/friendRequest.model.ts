@@ -1,6 +1,6 @@
 import { Schema, model } from 'mongoose';
-import { IFriendRequest } from './friendRequest.interface';
 import { ENUM_FRIEND_REQUEST_STATUS } from './friendRequest.enum';
+import { IFriendRequest } from './friendRequest.interface';
 
 const FriendRequestSchema = new Schema<IFriendRequest>(
     {
