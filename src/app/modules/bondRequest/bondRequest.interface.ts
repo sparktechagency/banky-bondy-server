@@ -16,4 +16,6 @@ export interface IBondRequest {
     createdAt?: Date;
     updatedAt?: Date;
     isPause: boolean;
+    offerVector: number[];
+    wantVector: number[];
 }

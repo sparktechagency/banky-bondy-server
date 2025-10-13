@@ -1,8 +1,8 @@
 import httpStatus from 'http-status';
-import AppError from '../../error/appError';
 import QueryBuilder from '../../builder/QueryBuilder';
-import Relative from './relative.model';
+import AppError from '../../error/appError';
 import { IRelative } from './relative.interface';
+import Relative from './relative.model';
 
 // Create Relative
 const createRelative = async (userId: string, payload: IRelative) => {

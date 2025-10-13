@@ -38,6 +38,8 @@ const BondRequestSchema = new Schema<IBondRequest>(
             type: Boolean,
             default: false,
         },
+        offerVector: { type: [Number], index: '2dsphere' },
+        wantVector: { type: [Number], index: '2dsphere' },
     },
     {
         timestamps: true,
