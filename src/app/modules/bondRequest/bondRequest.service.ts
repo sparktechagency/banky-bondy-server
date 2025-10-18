@@ -908,13 +908,23 @@ export const getMatchingBondRequest = async (
     const isEmpty = (t?: string) => normalizeText(t) === 'empty';
     const isSurprise = (t?: string) => normalizeText(t) === 'surprise';
 
+    // Helper: calculate score with surprise wildcard
+    const getMatchScoreWithSurprise = (
+        wantVec: number[],
+        offerVec: number[],
+        wantText: string,
+        offerText: string
+    ) => {
+        if (isSurprise(wantText) || isSurprise(offerText)) return 1;
+        return calculateMatchScore(wantVec, offerVec, wantText, offerText);
+    };
+
     // 1️⃣ Fetch base bond request
     const start = await BondRequest.findOne({
         _id: bondRequestId,
         user: userId,
         status: ENUM_BOND_REQUEST_STATUS.WAITING_FOR_LINK,
         isPause: false,
-        // isLinked: false, //TODO:need to work on here
     })
         .select('offer want offerVector wantVector location radius user')
         .lean();
@@ -977,25 +987,18 @@ export const getMatchingBondRequest = async (
             (isEmpty(start.want) && !isEmpty(c.offer));
         if (skipEmpty) continue;
 
-        const score1 =
-            isSurprise(start.want) || isSurprise(c.offer)
-                ? 1
-                : calculateMatchScore(
-                      start.wantVector,
-                      c.offerVector,
-                      start.want,
-                      c.offer
-                  );
-
-        const score2 =
-            isSurprise(c.want) || isSurprise(start.offer)
-                ? 1
-                : calculateMatchScore(
-                      c.wantVector,
-                      start.offerVector,
-                      c.want,
-                      start.offer
-                  );
+        const score1 = getMatchScoreWithSurprise(
+            start.wantVector,
+            c.offerVector,
+            start.want,
+            c.offer
+        );
+        const score2 = getMatchScoreWithSurprise(
+            c.wantVector,
+            start.offerVector,
+            c.want,
+            start.offer
+        );
 
         if (score1 >= MIN_SCORE && score2 >= MIN_SCORE) {
             const avg = Math.min(1, (score1 + score2) / 2);
@@ -1013,7 +1016,6 @@ export const getMatchingBondRequest = async (
     // 7️⃣ Build adjacency list for cycles
     const allReqs = [start, ...candidates];
     const requestMap = new Map(allReqs.map((r) => [r._id.toString(), r]));
-
     const edges = new Map<string, { to: string; score: number }[]>();
 
     for (const [id, req] of requestMap) {
@@ -1025,15 +1027,12 @@ export const getMatchingBondRequest = async (
             if (isEmpty(req.offer) && !isEmpty(tReq.want)) continue;
             if (isEmpty(req.want) && !isEmpty(tReq.offer)) continue;
 
-            const score =
-                isSurprise(req.want) || isSurprise(tReq.offer)
-                    ? 1
-                    : calculateMatchScore(
-                          req.wantVector,
-                          tReq.offerVector,
-                          req.want,
-                          tReq.offer
-                      );
+            const score = getMatchScoreWithSurprise(
+                req.wantVector,
+                tReq.offerVector,
+                req.want,
+                tReq.offer
+            );
 
             if (score >= MIN_SCORE) {
                 edges.get(id)!.push({ to: tid, score });
@@ -1058,7 +1057,7 @@ export const getMatchingBondRequest = async (
             if (!nextReq) continue;
 
             const nextUser = nextReq.user.toString();
-            if (userSet.has(nextUser)) continue; // ❌ user already used in chain
+            if (userSet.has(nextUser)) continue;
 
             if (path.includes(to)) {
                 if (to === startId && path.length >= 3) {
