@@ -95,7 +95,53 @@ const updateBondRequestIntoDB = async (
     if (!bondRequest)
         throw new AppError(httpStatus.NOT_FOUND, 'BondRequest not found');
 
-    return await BondRequest.findByIdAndUpdate(id, payload, { new: true });
+    if (payload.offer) {
+        const offerCheck = await isTextSafe(payload.offer);
+
+        if (!offerCheck.safe)
+            throw new AppError(
+                httpStatus.BAD_REQUEST,
+                `Offer is not allowed: ${offerCheck.reason}`
+            );
+    }
+    if (payload.want) {
+        const wantCheck = await isTextSafe(payload.want);
+
+        if (!wantCheck.safe)
+            throw new AppError(
+                httpStatus.BAD_REQUEST,
+                `Want is not allowed: ${wantCheck.reason}`
+            );
+    }
+
+    if (payload.offer && payload.want) {
+        const [offerVector, wantVector] = await Promise.all([
+            generateEmbedding(payload.offer),
+            generateEmbedding(payload.want),
+        ]);
+
+        return await BondRequest.findByIdAndUpdate(
+            id,
+            { ...payload, offerVector, wantVector },
+            { new: true }
+        );
+    } else if (payload.offer) {
+        const offerVector = await generateEmbedding(payload.offer);
+        return await BondRequest.findByIdAndUpdate(
+            id,
+            { ...payload, offerVector },
+            { new: true }
+        );
+    } else if (payload.want) {
+        const wantVector = await generateEmbedding(payload.want);
+        return await BondRequest.findByIdAndUpdate(
+            id,
+            { ...payload, wantVector },
+            { new: true }
+        );
+    } else {
+        return await BondRequest.findByIdAndUpdate(id, payload, { new: true });
+    }
 };
 
 const deleteBondRequestFromDB = async (userId: string, id: string) => {
