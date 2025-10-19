@@ -61,7 +61,9 @@ const myBondRequests = async (
     query: Record<string, unknown>
 ) => {
     const resultQuery = new QueryBuilder(
-        BondRequest.find({ user: userId }).select('-offerVector -wantVector'),
+        BondRequest.find({ user: userId, isLinked: false }).select(
+            '-offerVector -wantVector'
+        ),
         query
     )
         .search(['give', 'get', 'location'])
@@ -1266,6 +1268,7 @@ export const getMatchingBondRequest = async (
         user: { $ne: userId },
         status: ENUM_BOND_REQUEST_STATUS.WAITING_FOR_LINK,
         isPause: false,
+        isLinked: false,
         ...geoFilter,
     })
         .select('_id user offer want offerVector wantVector location radius')
