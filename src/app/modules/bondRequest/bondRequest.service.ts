@@ -1347,97 +1347,47 @@ export const getMatchingBondRequest = async (
     }
 
     // 8️⃣ DFS for cycles (unique users only)
-    // const seenCycles = new Set<string>();
-    // const dfs = (
-    //     startId: string,
-    //     currId: string,
-    //     path: string[],
-    //     accScore: number,
-    //     userSet: Set<string>
-    // ) => {
-    //     if (path.length > MAX_CYCLE_SIZE) return;
-
-    //     for (const { to, score } of edges.get(currId) || []) {
-    //         const nextReq = requestMap.get(to);
-    //         if (!nextReq) continue;
-
-    //         const nextUser = nextReq.user.toString();
-    //         if (userSet.has(nextUser)) continue; // user already used
-
-    //         if (path.includes(to)) {
-    //             if (to === startId && path.length >= 3) {
-    //                 const key = path.sort().join('-');
-    //                 if (!seenCycles.has(key) && !globalSeen.has(key)) {
-    //                     seenCycles.add(key);
-    //                     globalSeen.add(key);
-    //                     matches.push({ ids: [...path], score: accScore });
-    //                 }
-    //             }
-    //             continue;
-    //         }
-
-    //         const newUserSet = new Set(userSet);
-    //         newUserSet.add(nextUser);
-    //         const newScore = (accScore + score) / 2;
-    //         dfs(startId, to, [...path, to], newScore, newUserSet);
-    //     }
-    // };
-
-    // dfs(
-    //     bondRequestId,
-    //     bondRequestId,
-    //     [bondRequestId],
-    //     1,
-    //     new Set([start.user.toString()])
-    // );
-
-    // 8️⃣ DFS for cycles (unique users only)
     const seenCycles = new Set<string>();
-
     const dfs = (
         startId: string,
-        currentId: string,
+        currId: string,
         path: string[],
         accScore: number,
         userSet: Set<string>
     ) => {
         if (path.length > MAX_CYCLE_SIZE) return;
 
-        for (const { to, score } of edges.get(currentId) || []) {
+        for (const { to, score } of edges.get(currId) || []) {
             const nextReq = requestMap.get(to);
             if (!nextReq) continue;
 
             const nextUser = nextReq.user.toString();
+            if (userSet.has(nextUser)) continue; // user already used
 
-            // Don’t revisit the same user in same path
-            if (userSet.has(nextUser)) continue;
-
-            // Cycle found
-            if (to === startId && path.length >= 3) {
-                const cycleKey = path.join('->');
-                if (!seenCycles.has(cycleKey)) {
-                    seenCycles.add(cycleKey);
-                    matches.push({
-                        ids: [...path],
-                        score: Number((accScore / path.length).toFixed(3)),
-                    });
+            if (path.includes(to)) {
+                if (to === startId && path.length >= 3) {
+                    const key = path.sort().join('-');
+                    if (!seenCycles.has(key) && !globalSeen.has(key)) {
+                        seenCycles.add(key);
+                        globalSeen.add(key);
+                        matches.push({ ids: [...path], score: accScore });
+                    }
                 }
                 continue;
             }
 
-            // Continue DFS deeper
             const newUserSet = new Set(userSet);
             newUserSet.add(nextUser);
-            dfs(startId, to, [...path, to], accScore + score, newUserSet);
+            const newScore = (accScore + score) / 2;
+            dfs(startId, to, [...path, to], newScore, newUserSet);
         }
     };
 
-    // Start DFS
     dfs(
         bondRequestId,
         bondRequestId,
         [bondRequestId],
-        0,
+        1,
         new Set([start.user.toString()])
     );
 
