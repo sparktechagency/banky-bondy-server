@@ -39,5 +39,17 @@ export default {
         smtp_pass: process.env.SMTP_PASS,
         name: process.env.SERVICE_NAME,
     },
-    smartsheet_api_key: process.env.SMARTSHEET_API_KEY,
+    paypal: {
+        client_id: process.env.PAYPAL_CLIENT_ID,
+        client_secret: process.env.PAYPAL_CLIENT_SECRET,
+        mode: process.env.PAYPAL_MODE,
+        paypal_campaign_run_payment_success_url:
+            process.env.PAYPAL_CAMPAIGN_RUN_PAYMENT_SUCCESS_URL,
+        paypal_campaign_run_payment_cancel_url:
+            process.env.PAYPAL_CAMPAIGN_RUN_PAYMENT_CANCEL_URL,
+        payment_capture_url: process.env.PAYPAL_PAYMENT_CAPTURE_URL,
+        base_url: process.env.PAYPAL_BASE_URL,
+        paypal_onboarding_success: process.env.PAYPAL_ONBOARDING_SUCCESS,
+        paypal_onboarding_failed: process.env.PAYPAL_ONBOARDING_FAILED,
+    },
 };

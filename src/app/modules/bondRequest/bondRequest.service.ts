@@ -1268,7 +1268,7 @@ export const getMatchingBondRequest = async (
         user: { $ne: userId },
         status: ENUM_BOND_REQUEST_STATUS.WAITING_FOR_LINK,
         isPause: false,
-        isLinked: false,
+        // isLinked: false,
         ...geoFilter,
     })
         .select('_id user offer want offerVector wantVector location radius')
