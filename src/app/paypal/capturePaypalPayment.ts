@@ -13,6 +13,7 @@ const capturePayPalPayment = async (req: Request, res: Response) => {
         const captureRequest: any = new paypal.orders.OrdersCaptureRequest(
             orderId as string
         );
+        // capture payment
         captureRequest.requestBody({});
         const captureResponse = await paypalClient.execute(captureRequest);
         if (captureResponse.result.status !== 'COMPLETED') {
