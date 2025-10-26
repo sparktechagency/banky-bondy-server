@@ -43,8 +43,8 @@ export default {
         client_id: process.env.PAYPAL_CLIENT_ID,
         client_secret: process.env.PAYPAL_CLIENT_SECRET,
         mode: process.env.PAYPAL_MODE,
-        paypal_campaign_run_payment_success_url:
-            process.env.PAYPAL_CAMPAIGN_RUN_PAYMENT_SUCCESS_URL,
+        donation_success_url: process.env.DONATION_SUCCESS_URL,
+        donation_cancel_url: process.env.DONATION_CANCEL_URL,
         paypal_campaign_run_payment_cancel_url:
             process.env.PAYPAL_CAMPAIGN_RUN_PAYMENT_CANCEL_URL,
         payment_capture_url: process.env.PAYPAL_PAYMENT_CAPTURE_URL,

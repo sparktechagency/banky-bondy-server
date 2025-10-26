@@ -59,7 +59,7 @@ const donate = async (userId: string, amount: number) => {
                 landing_page: 'LOGIN',
                 user_action: 'PAY_NOW',
                 return_url: `${config.paypal.payment_capture_url}`,
-                cancel_url: `${config.paypal.paypal_campaign_run_payment_cancel_url}`,
+                cancel_url: `${config.paypal.donation_cancel_url}`,
             },
         });
 

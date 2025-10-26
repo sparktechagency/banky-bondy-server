@@ -9,6 +9,7 @@ import express, { Application } from 'express';
 import sendContactUsEmail from './app/helper/sendContactUsEmail';
 import globalErrorHandler from './app/middlewares/globalErrorHandler';
 import notFound from './app/middlewares/notFound';
+import capturePayPalPayment from './app/paypal/capturePaypalPayment';
 import router from './app/routes';
 import handleWebhook from './app/stripe/webhook';
 const app: Application = express();
@@ -50,7 +51,7 @@ app.use('/uploads', express.static('uploads'));
 // application routers ----------------
 app.use('/', router);
 app.post('/contact-us', sendContactUsEmail);
-
+app.get('/capture-payment', capturePayPalPayment);
 app.get('/', async (req, res) => {
     res.send({ message: 'Welcome to bankybondy  server' });
 });
