@@ -66,7 +66,7 @@ const myBondRequests = async (
         ),
         query
     )
-        .search(['give', 'get', 'location'])
+        .search(['offer', 'want', 'location'])
         .fields()
         .filter()
         .paginate()
