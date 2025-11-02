@@ -515,7 +515,7 @@ export const calculateMatchScore = (
     wantText: string = '',
     offerText: string = ''
 ): number => {
-    const sim = cosineSimilarity(wantVec || [], offerVec || []);
+    const sim = cosineSimilarity(wantVec, offerVec);
     const overlap = tokenOverlapRatio(wantText, offerText);
     return 0.7 * sim + 0.3 * overlap;
 };
@@ -536,6 +536,16 @@ export const getMatchingBondRequest = async (
     const isEmpty = (s?: string) => normalizeText(s) === 'empty';
     const isSurprise = (s?: string) => normalizeText(s) === 'surprise';
 
+    // Helper function for matching logic
+    const isValidMatch = (want: string, offer: string) => {
+        const wantSurprise = isSurprise(want);
+        const offerSurprise = isSurprise(offer);
+
+        if (wantSurprise) return true; // want surprise → matches anything
+        if (offerSurprise) return wantSurprise; // offer surprise → only matches if want surprise
+        return tokenOverlapRatio(want, offer) > 0; // specific want → must match offer
+    };
+
     // 1. Fetch starting bond request
     const startRequest = await BondRequest.findOne({
         _id: bondRequestId,
@@ -548,7 +558,7 @@ export const getMatchingBondRequest = async (
 
     if (!startRequest) throw new AppError(404, 'Bond request not found');
 
-    // 2. Ensure embeddings exist for startRequest
+    // 2. Ensure embeddings exist
     if (!startRequest.offerVector || !startRequest.offerVector.length) {
         startRequest.offerVector = await generateEmbedding(startRequest.offer);
         await BondRequest.updateOne(
@@ -564,7 +574,7 @@ export const getMatchingBondRequest = async (
         );
     }
 
-    // 3. Geo filter (optional)
+    // 3. Geo filter
     const geoFilter: any = {};
     if (startRequest.location && startRequest.radius) {
         const [lng, lat] = startRequest.location.coordinates;
@@ -575,7 +585,7 @@ export const getMatchingBondRequest = async (
         };
     }
 
-    // 4. Fetch all candidates (excluding the same bond and same user)
+    // 4. Fetch candidates
     const candidates = await BondRequest.find({
         _id: { $ne: bondRequestId },
         user: { $ne: userId },
@@ -589,7 +599,7 @@ export const getMatchingBondRequest = async (
     const matches: { ids: string[]; score: number }[] = [];
     const globalSeen = new Set<string>();
 
-    // 5. Ensure embeddings for all candidates
+    // 5. Ensure embeddings for candidates
     for (const candidate of candidates) {
         if (!candidate.offerVector || !candidate.offerVector.length) {
             candidate.offerVector = await generateEmbedding(
@@ -603,7 +613,7 @@ export const getMatchingBondRequest = async (
         }
     }
 
-    // 6. Pairwise 2-person matches (require both directions meet MIN_SCORE)
+    // 6. Pairwise matches
     for (const candidate of candidates) {
         const startOfferEmpty = isEmpty(startRequest.offer);
         const startWantEmpty = isEmpty(startRequest.want);
@@ -617,40 +627,9 @@ export const getMatchingBondRequest = async (
             continue;
         }
 
-        const startWantSurprise = isSurprise(startRequest.want);
-        const startOfferSurprise = isSurprise(startRequest.offer);
-        const candidateWantSurprise = isSurprise(candidate.want);
-        const candidateOfferSurprise = isSurprise(candidate.offer);
+        if (!isValidMatch(startRequest.want, candidate.offer)) continue;
+        if (!isValidMatch(candidate.want, startRequest.offer)) continue;
 
-        // 1. Skip meaningless double surprise offers in both directions
-        if (
-            startWantSurprise &&
-            candidateOfferSurprise &&
-            startOfferSurprise &&
-            candidateWantSurprise
-        ) {
-            continue;
-        }
-
-        // 2. Determine if this is a valid match
-        let validMatch = false;
-
-        if (startWantSurprise) {
-            // start wants surprise → match any candidate offer
-            validMatch = true;
-        } else if (candidateWantSurprise) {
-            // candidate wants surprise → match any start offer
-            validMatch = true;
-        } else {
-            // Both wants are specific → match only if offer matches want
-            validMatch =
-                tokenOverlapRatio(startRequest.want, candidate.offer) > 0 &&
-                tokenOverlapRatio(candidate.want, startRequest.offer) > 0;
-        }
-
-        if (!validMatch) continue;
-
-        // calculate scores normally
         const score1 = calculateMatchScore(
             startRequest.wantVector || [],
             candidate.offerVector || [],
@@ -679,7 +658,7 @@ export const getMatchingBondRequest = async (
         }
     }
 
-    // 7. Build requestMap and edges for cycles (3-5)
+    // 7. Build edges for cycles
     const requestMap = new Map<string, any>(
         candidates.map((c) => [c._id.toString(), c])
     );
@@ -697,31 +676,15 @@ export const getMatchingBondRequest = async (
         edges.set(id, []);
         for (const [toId, toReq] of requestMap.entries()) {
             if (id === toId) continue;
+            if (!isValidMatch(req.want, toReq.offer)) continue;
+            if (!isValidMatch(toReq.want, req.offer)) continue;
 
-            const reqWantSurprise = isSurprise(req.want);
-            const reqOfferSurprise = isSurprise(req.offer);
-            const toWantSurprise = isSurprise(toReq.want);
-            const toOfferSurprise = isSurprise(toReq.offer);
-
-            if (
-                reqWantSurprise &&
-                toOfferSurprise &&
-                reqOfferSurprise &&
-                toWantSurprise
-            )
-                continue;
-
-            let score: number;
-            if (reqWantSurprise || toWantSurprise) {
-                score = 0.9; // wildcard strong match
-            } else {
-                score = calculateMatchScore(
-                    req.wantVector || [],
-                    toReq.offerVector || [],
-                    req.want || '',
-                    toReq.offer || ''
-                );
-            }
+            const score = calculateMatchScore(
+                req.wantVector || [],
+                toReq.offerVector || [],
+                req.want || '',
+                toReq.offer || ''
+            );
 
             if (score >= MIN_SCORE) {
                 edges.get(id)!.push({ to: toId, score });
@@ -729,6 +692,7 @@ export const getMatchingBondRequest = async (
         }
     }
 
+    // 8. DFS to find cycles
     const seenCycles = new Set<string>();
     const dfs = (
         startId: string,
@@ -774,6 +738,7 @@ export const getMatchingBondRequest = async (
 
     dfs(bondRequestId, bondRequestId, [bondRequestId], 1);
 
+    // 9. Populate final results
     const allIds = [...new Set(matches.flatMap((m) => m.ids))];
     const populated = await BondRequest.find({ _id: { $in: allIds } })
         .select('-wantVector -offerVector')
