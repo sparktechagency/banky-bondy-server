@@ -520,6 +520,21 @@ export const calculateMatchScore = (
     return 0.7 * sim + 0.3 * overlap;
 };
 
+// --- Helper for "surprise" scoring ---
+const calculateMatchScoreWithSurprise = (
+    want: string,
+    wantVec: number[],
+    offer: string,
+    offerVec: number[]
+): number => {
+    const isSurprise = (s?: string) => normalizeText(s) === 'surprise';
+    if (isSurprise(want)) {
+        // Want = surprise → accept anything, give minimum high score
+        return 0.8 + 0.2 * calculateMatchScore(wantVec, offerVec, want, offer);
+    }
+    return calculateMatchScore(wantVec, offerVec, want, offer);
+};
+
 export const isHighConfidenceMatch = (score: number) => score >= 0.7;
 
 export const getMatchingBondRequest = async (
@@ -536,14 +551,13 @@ export const getMatchingBondRequest = async (
     const isEmpty = (s?: string) => normalizeText(s) === 'empty';
     const isSurprise = (s?: string) => normalizeText(s) === 'surprise';
 
-    // Helper function for matching logic
-    const isValidMatch = (want: string, offer: string) => {
+    // --- Matching rules ---
+    const isValidMatch = (want: string, offer: string): boolean => {
         const wantSurprise = isSurprise(want);
         const offerSurprise = isSurprise(offer);
-
-        if (wantSurprise) return true; // want surprise → matches anything
-        if (offerSurprise) return wantSurprise; // offer surprise → only matches if want surprise
-        return tokenOverlapRatio(want, offer) > 0; // specific want → must match offer
+        if (wantSurprise) return true; // Want surprise → accept anything
+        if (offerSurprise) return wantSurprise; // Offer surprise → only matches if want surprise
+        return tokenOverlapRatio(want, offer) > 0; // Specific wants → must match
     };
 
     // 1. Fetch starting bond request
@@ -630,17 +644,17 @@ export const getMatchingBondRequest = async (
         if (!isValidMatch(startRequest.want, candidate.offer)) continue;
         if (!isValidMatch(candidate.want, startRequest.offer)) continue;
 
-        const score1 = calculateMatchScore(
+        const score1 = calculateMatchScoreWithSurprise(
+            startRequest.want,
             startRequest.wantVector || [],
-            candidate.offerVector || [],
-            startRequest.want || '',
-            candidate.offer || ''
+            candidate.offer,
+            candidate.offerVector || []
         );
-        const score2 = calculateMatchScore(
+        const score2 = calculateMatchScoreWithSurprise(
+            candidate.want,
             candidate.wantVector || [],
-            startRequest.offerVector || [],
-            candidate.want || '',
-            startRequest.offer || ''
+            startRequest.offer,
+            startRequest.offerVector || []
         );
 
         if (score1 >= MIN_SCORE && score2 >= MIN_SCORE) {
@@ -679,11 +693,11 @@ export const getMatchingBondRequest = async (
             if (!isValidMatch(req.want, toReq.offer)) continue;
             if (!isValidMatch(toReq.want, req.offer)) continue;
 
-            const score = calculateMatchScore(
+            const score = calculateMatchScoreWithSurprise(
+                req.want,
                 req.wantVector || [],
-                toReq.offerVector || [],
-                req.want || '',
-                toReq.offer || ''
+                toReq.offer,
+                toReq.offerVector || []
             );
 
             if (score >= MIN_SCORE) {
