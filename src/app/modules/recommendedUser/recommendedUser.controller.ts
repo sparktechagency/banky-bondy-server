@@ -1,24 +1,32 @@
-import httpStatus from "http-status";
-import catchAsync from "../../utilities/catchasync";
-import sendResponse from "../../utilities/sendResponse";
-import recommendedUserServices from "./recommendedUser.service";
+import httpStatus from 'http-status';
+import catchAsync from '../../utilities/catchasync';
+import sendResponse from '../../utilities/sendResponse';
+import recommendedUserServices from './recommendedUser.service';
 
-const updateUserProfile = catchAsync(async (req, res) => {
-    const { files } = req;
-    if (files && typeof files === "object" && "profile_image" in files) {
-        req.body.profile_image = files["profile_image"][0].path;
-    }
-    const result = await recommendedUserServices.updateUserProfile(
-        req.user.profileId,
+const createRecommendedUsers = catchAsync(async (req, res) => {
+    const result = await recommendedUserServices.createRecommendedUsers(
         req.body
     );
     sendResponse(res, {
         statusCode: httpStatus.OK,
         success: true,
-        message: "Profile updated successfully",
+        message: 'Profile updated successfully',
         data: result,
     });
 });
 
-const RecommendedUserController = { updateUserProfile };
+const getRecommendedUsers = catchAsync(async (req, res) => {
+    const result = await recommendedUserServices.getRecommendedUsers(req.query);
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: 'Recommended user retrieved successfully',
+        data: result,
+    });
+});
+
+const RecommendedUserController = {
+    createRecommendedUsers,
+    getRecommendedUsers,
+};
 export default RecommendedUserController;
