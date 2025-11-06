@@ -33,6 +33,7 @@ export const ENUM_TRANSACTION_TYPE = {
 };
 export const ENUM_PAYMENT_PURPOSE = {
     DONATE: 'DONATE',
+    SUBSCRIPTION: 'SUBSCRIPTION',
 };
 
 export const ENUM_PAYMENT_STATUS = {

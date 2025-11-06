@@ -1,10 +1,10 @@
 import express, { NextFunction, Request, Response } from 'express';
-import auth from '../../middlewares/auth';
-import { USER_ROLE } from '../user/user.constant';
-import validateRequest from '../../middlewares/validateRequest';
-import normalUserValidations from './normalUser.validation';
-import NormalUserController from './normalUser.controller';
 import { uploadFile } from '../../helper/mutler-s3-uploader';
+import auth from '../../middlewares/auth';
+import validateRequest from '../../middlewares/validateRequest';
+import { USER_ROLE } from '../user/user.constant';
+import NormalUserController from './normalUser.controller';
+import normalUserValidations from './normalUser.validation';
 
 const router = express.Router();
 
@@ -32,6 +32,13 @@ router.get(
     '/single-user/:id',
     auth(USER_ROLE.superAdmin, USER_ROLE.user),
     NormalUserController.getSingleUser
+);
+
+router.post(
+    '/subscribe',
+    auth(USER_ROLE.user),
+    validateRequest(normalUserValidations.subscriptionValidationSchema),
+    NormalUserController.purchaseSubscription
 );
 
 export const normalUserRoutes = router;

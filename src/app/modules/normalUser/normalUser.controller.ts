@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import httpStatus from 'http-status';
+import { getCloudFrontUrl } from '../../helper/mutler-s3-uploader';
 import catchAsync from '../../utilities/catchasync';
 import sendResponse from '../../utilities/sendResponse';
 import NormalUserServices from './normalUser.services';
-import { getCloudFrontUrl } from '../../helper/mutler-s3-uploader';
 
 const updateUserProfile = catchAsync(async (req, res) => {
     const file: any = req.files?.profile_image;
@@ -48,11 +48,24 @@ const getSingleUser = catchAsync(async (req, res) => {
         data: result,
     });
 });
+const purchaseSubscription = catchAsync(async (req, res) => {
+    const result = await NormalUserServices.purchaseSubscription(
+        req.user.profileId,
+        req.body.type
+    );
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: 'Payment link generated for subscription',
+        data: result,
+    });
+});
 
 const NormalUserController = {
     updateUserProfile,
     getAllUser,
     getSingleUser,
+    purchaseSubscription,
 };
 
 export default NormalUserController;

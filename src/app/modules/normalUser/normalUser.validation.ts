@@ -41,9 +41,16 @@ export const updateNormalUserData = z.object({
     }),
 });
 
+const subscriptionValidationSchema = z.object({
+    body: z.object({
+        type: z.enum(['Premium', 'Standard']),
+    }),
+});
+
 const normalUserValidations = {
     createNormalUserSchema,
     updateNormalUserData,
+    subscriptionValidationSchema,
 };
 
 export default normalUserValidations;

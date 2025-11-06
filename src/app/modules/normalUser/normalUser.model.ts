@@ -56,6 +56,15 @@ const NormalUserSchema = new Schema<INormalUser>(
             type: [String],
             default: [],
         },
+        // subscriptionType: {
+        //     type: String,
+        //     enum: Object.values(ENUM_SUBSCRIPTION_TYPE),
+        //     default: ENUM_SUBSCRIPTION_TYPE.Free,
+        // },
+        bondLimit: {
+            type: Number,
+            default: 10,
+        },
     },
     {
         timestamps: true,

@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import httpStatus from 'http-status';
 import config from '../config';
 import AppError from '../error/appError';
@@ -7,7 +7,6 @@ import { ENUM_DONATE_STATUS } from '../modules/donate/donate.enum';
 import { Donate } from '../modules/donate/donate.model';
 
 const handleDonationPaymentSuccess = async (
-    req: Request,
     res: Response,
     donationId: string,
     transactionId: string,

@@ -16,4 +16,6 @@ export interface INormalUser {
     bio: string;
     skills: [Types.ObjectId];
     socialLinks: string[];
+    // subscriptionType: (typeof ENUM_SUBSCRIPTION_TYPE)[keyof typeof ENUM_SUBSCRIPTION_TYPE];
+    bondLimit: number;
 }

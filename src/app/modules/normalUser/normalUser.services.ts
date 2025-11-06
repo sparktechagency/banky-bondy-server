@@ -1,15 +1,19 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import paypal from '@paypal/checkout-server-sdk';
 import httpStatus from 'http-status';
 import { JwtPayload } from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import QueryBuilder from '../../builder/QueryBuilder';
+import config from '../../config';
 import AppError from '../../error/appError';
+import { ENUM_PAYMENT_PURPOSE } from '../../utilities/enum';
+import paypalClient from '../../utilities/paypal';
 import { ENUM_FRIEND_REQUEST_STATUS } from '../friendRequest/friendRequest.enum';
 import Relative from '../relative/relative.model';
 import { USER_ROLE } from '../user/user.constant';
+import { ENUM_SUBSCRIPTION_TYPE } from './normalUser.enum';
 import { INormalUser } from './normalUser.interface';
 import NormalUser from './normalUser.model';
-
 const updateUserProfile = async (id: string, payload: Partial<INormalUser>) => {
     if (payload.email) {
         throw new AppError(
@@ -556,10 +560,70 @@ export async function getSingleUserWithStatus(
     return doc;
 }
 
+const purchaseSubscription = async (profileId: string, type: string) => {
+    const user = await NormalUser.findById(profileId);
+    if (!user) {
+        throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+    }
+    let totalAmount;
+    if (type == ENUM_SUBSCRIPTION_TYPE.Standard) {
+        totalAmount = 10;
+    } else {
+        totalAmount = 25;
+    }
+
+    try {
+        const request = new paypal.orders.OrdersCreateRequest();
+        request.prefer('return=representation');
+        request.requestBody({
+            intent: 'CAPTURE',
+            purchase_units: [
+                {
+                    amount: {
+                        currency_code: 'USD',
+                        value: totalAmount.toFixed(2),
+                    },
+                    description: `Payment for subscription: ${type}`,
+                    custom_id: user._id.toString(),
+                    reference_id: ENUM_PAYMENT_PURPOSE.SUBSCRIPTION,
+                },
+            ],
+            application_context: {
+                brand_name: 'Your Business Name',
+                landing_page: 'LOGIN',
+                user_action: 'PAY_NOW',
+                return_url: `${config.paypal.payment_capture_url}`,
+                cancel_url: `${config.paypal.donation_cancel_url}`,
+            },
+        });
+
+        const response = await paypalClient.execute(request);
+        const approvalUrl = response.result.links.find(
+            (link: any) => link.rel === 'approve'
+        )?.href;
+
+        if (!approvalUrl) {
+            throw new AppError(
+                httpStatus.INTERNAL_SERVER_ERROR,
+                'PayPal payment creation failed: No approval URL found'
+            );
+        }
+
+        return { url: approvalUrl };
+    } catch (error) {
+        console.error('PayPal Payment Error:', error);
+        throw new AppError(
+            httpStatus.INTERNAL_SERVER_ERROR,
+            'Failed to create PayPal order'
+        );
+    }
+};
+
 const NormalUserServices = {
     updateUserProfile,
     getAllUser,
     getSingleUser,
+    purchaseSubscription,
 };
 
 export default NormalUserServices;

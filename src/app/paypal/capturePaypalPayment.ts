@@ -6,6 +6,7 @@ import { Request, Response } from 'express';
 import { ENUM_PAYMENT_PURPOSE } from '../utilities/enum';
 import paypalClient from '../utilities/paypal';
 import handleDonationPaymentSuccess from './handleDonationPaymentSuccess';
+import handleSubscriptionPaymentSuccess from './handleSubscriptionPayment';
 //
 const capturePayPalPayment = async (req: Request, res: Response) => {
     const orderId = req.query.token;
@@ -32,8 +33,9 @@ const capturePayPalPayment = async (req: Request, res: Response) => {
         const amount = purchaseUnit.amount.value;
 
         if (paymentPurpose === ENUM_PAYMENT_PURPOSE.DONATE) {
-            await handleDonationPaymentSuccess(
-                req,
+            await handleDonationPaymentSuccess(res, id, transactionId, amount);
+        } else if (paymentPurpose === ENUM_PAYMENT_PURPOSE.SUBSCRIPTION) {
+            await handleSubscriptionPaymentSuccess(
                 res,
                 id,
                 transactionId,
