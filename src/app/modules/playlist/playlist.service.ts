@@ -128,7 +128,7 @@ const getAllPlaylists = async (query: any, userId: string) => {
                         $addFields: {
                             page,
                             limit,
-                            totalPage: {
+                            totalPages: {
                                 $ceil: { $divide: ['$total', limit] },
                             },
                         },
@@ -152,7 +152,7 @@ const getAllPlaylists = async (query: any, userId: string) => {
     const data = await Playlist.aggregate(aggregationPipeline);
 
     return {
-        meta: data[0]?.meta || { page, limit, total: 0, totalPage: 0 },
+        meta: data[0]?.meta || { page, limit, total: 0, totalPages: 0 },
         result: data[0]?.result || [],
     };
 };

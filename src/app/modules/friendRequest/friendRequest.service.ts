@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import httpStatus from 'http-status';
-import AppError from '../../error/appError';
-import FriendRequest from './friendRequest.model';
-import { ENUM_FRIEND_REQUEST_STATUS } from './friendRequest.enum';
 import mongoose from 'mongoose';
+import AppError from '../../error/appError';
+import { ENUM_FRIEND_REQUEST_STATUS } from './friendRequest.enum';
+import FriendRequest from './friendRequest.model';
 type ENUM_FRIEND_REQUEST_STATUS = keyof typeof ENUM_FRIEND_REQUEST_STATUS;
 const sendFriendRequest = async (sender: string, receiver: string) => {
     if (sender === receiver)
@@ -172,13 +172,13 @@ const getMyFriends = async (userId: string, query: Record<string, any>) => {
     const aggResult = await FriendRequest.aggregate(pipeline);
     const result = aggResult[0]?.result || [];
     const total = aggResult[0]?.meta[0]?.total || 0;
-    const totalPage = Math.ceil(total / limit);
+    const totalPages = Math.ceil(total / limit);
     return {
         meta: {
             page,
             limit,
             total,
-            totalPage,
+            totalPages,
         },
         result,
     };
@@ -263,14 +263,14 @@ const getMyFollowers = async (userId: string, query: Record<string, any>) => {
     const aggResult = await FriendRequest.aggregate(pipeline);
     const result = aggResult[0]?.result || [];
     const total = aggResult[0]?.meta[0]?.total || 0;
-    const totalPage = Math.ceil(total / limit);
+    const totalPages = Math.ceil(total / limit);
 
     return {
         meta: {
             page,
             limit,
             total,
-            totalPage,
+            totalPages,
         },
         result,
     };
@@ -358,14 +358,14 @@ const getMyFollowing = async (userId: string, query: Record<string, any>) => {
     const aggResult = await FriendRequest.aggregate(pipeline);
     const result = aggResult[0]?.result || [];
     const total = aggResult[0]?.meta[0]?.total || 0;
-    const totalPage = Math.ceil(total / limit);
+    const totalPages = Math.ceil(total / limit);
 
     return {
         meta: {
             page,
             limit,
             total,
-            totalPage,
+            totalPages,
         },
         result,
     };

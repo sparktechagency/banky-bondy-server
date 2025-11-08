@@ -292,7 +292,7 @@ const getAllUser = async (
                             $addFields: {
                                 page,
                                 limit,
-                                totalPage: {
+                                totalPages: {
                                     $ceil: { $divide: ['$total', limit] },
                                 },
                             },
@@ -314,7 +314,7 @@ const getAllUser = async (
                 page,
                 limit,
                 total: 0,
-                totalPage: 0,
+                totalPages: 0,
             },
             result: aggResult[0]?.data || [],
         };

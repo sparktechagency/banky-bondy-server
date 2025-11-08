@@ -175,14 +175,14 @@ const createProject = async (userId: string, payload: IProject) => {
 //     // Get results and total count
 //     const result = aggResult[0]?.result || [];
 //     const total = aggResult[0]?.meta[0]?.total || 0;
-//     const totalPage = Math.ceil(total / limit);
+//     const totalPages = Math.ceil(total / limit);
 
 //     return {
 //         meta: {
 //             page,
 //             limit,
 //             total,
-//             totalPage,
+//             totalPages,
 //         },
 //         result,
 //     };
@@ -336,14 +336,14 @@ const getAllProjects = async (userId: string, query: Record<string, any>) => {
     // Get results and total count
     const result = aggResult[0]?.result || [];
     const total = aggResult[0]?.totalCount[0]?.total || 0;
-    const totalPage = Math.ceil(total / limit);
+    const totalPages = Math.ceil(total / limit);
 
     return {
         meta: {
             page,
             limit,
             total,
-            totalPage,
+            totalPages,
         },
         result,
     };

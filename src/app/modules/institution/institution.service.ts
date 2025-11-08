@@ -165,14 +165,14 @@ const getAllInstitutions = async (
     const aggResult = await Institution.aggregate(pipeline);
     const result = aggResult[0]?.result || [];
     const total = aggResult[0]?.totalCount[0]?.total || 0;
-    const totalPage = Math.ceil(total / limit);
+    const totalPages = Math.ceil(total / limit);
 
     return {
         meta: {
             page,
             limit,
             total,
-            totalPage,
+            totalPages,
         },
         result,
     };

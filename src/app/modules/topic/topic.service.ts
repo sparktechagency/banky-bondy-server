@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import httpStatus from 'http-status';
 import AppError from '../../error/appError';
+import { deleteFileFromS3 } from '../../helper/deleteFromS3';
 import { ITopic } from './topic.interface';
 import { Topic } from './topic.model';
-import { deleteFileFromS3 } from '../../helper/deleteFromS3';
 
 // Create Topic
 const createTopic = async (payload: ITopic) => {
@@ -78,7 +78,7 @@ const getAllTopics = async (query: Record<string, unknown>) => {
             page,
             limit,
             totalCount,
-            totalPages: Math.ceil(totalCount / limit),
+            totalPagess: Math.ceil(totalCount / limit),
         },
         result: topics,
     };
