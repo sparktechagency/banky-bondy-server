@@ -78,7 +78,7 @@ const getAllTopics = async (query: Record<string, unknown>) => {
             page,
             limit,
             totalCount,
-            totalPagess: Math.ceil(totalCount / limit),
+            totalPages: Math.ceil(totalCount / limit),
         },
         result: topics,
     };
