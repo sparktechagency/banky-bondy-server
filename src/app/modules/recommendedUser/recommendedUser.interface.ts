@@ -6,4 +6,5 @@ export interface IRecommendedUser {
     email: string;
     phone: string;
     skill: Types.ObjectId;
+    recommendByUserId: Types.ObjectId;
 }

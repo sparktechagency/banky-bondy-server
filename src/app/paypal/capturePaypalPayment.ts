@@ -2,13 +2,13 @@
 // export default capturePayPalPayment;
 
 import paypal from '@paypal/checkout-server-sdk';
-import { Request, Response } from 'express';
+import { Request } from 'express';
 import { ENUM_PAYMENT_PURPOSE } from '../utilities/enum';
 import paypalClient from '../utilities/paypal';
 import handleDonationPaymentSuccess from './handleDonationPaymentSuccess';
 import handleSubscriptionPaymentSuccess from './handleSubscriptionPayment';
 //
-const capturePayPalPayment = async (req: Request, res: Response) => {
+const capturePayPalPayment = async (req: Request, res: any) => {
     const orderId = req.query.token;
     try {
         const captureRequest: any = new paypal.orders.OrdersCaptureRequest(
