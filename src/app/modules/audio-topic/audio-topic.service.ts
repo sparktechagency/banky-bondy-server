@@ -1,8 +1,8 @@
 import httpStatus from 'http-status';
 import AppError from '../../error/appError';
 
-import { deleteFileFromS3 } from '../../helper/deleteFromS3';
 import QueryBuilder from '../../builder/QueryBuilder';
+import { deleteFileFromS3 } from '../../helper/deleteFromS3';
 import { IAudioTopic } from './audio-topic.interface';
 import AudioTopic from './audio-topic.model';
 

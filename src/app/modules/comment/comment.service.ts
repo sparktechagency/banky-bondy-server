@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import httpStatus from 'http-status';
+import { JwtPayload } from 'jsonwebtoken';
+import mongoose from 'mongoose';
+import AppError from '../../error/appError';
 import { IComment } from './comment.interface';
 import Comment from './comment.model';
-import { JwtPayload } from 'jsonwebtoken';
-import AppError from '../../error/appError';
-import httpStatus from 'http-status';
-import mongoose from 'mongoose';
 
 const createComment = async (user: JwtPayload, payload: Partial<IComment>) => {
     const commentData: any = {
@@ -179,14 +179,14 @@ const getInstitutionConversationComments = async (
 
     const result = comments[0]?.result || [];
     const total = comments[0]?.totalCount[0]?.total || 0;
-    const totalPage = Math.ceil(total / limit);
+    const totalPages = Math.ceil(total / limit);
 
     const response = {
         meta: {
             page,
             limit,
             total,
-            totalPage,
+            totalPages,
         },
         result,
     };
@@ -266,14 +266,14 @@ const getReplies = async (
 
     const result = comments[0]?.result || [];
     const total = comments[0]?.totalCount[0]?.total || 0;
-    const totalPage = Math.ceil(total / limit);
+    const totalPages = Math.ceil(total / limit);
 
     const response = {
         meta: {
             page,
             limit,
             total,
-            totalPage,
+            totalPages,
         },
         result,
     };

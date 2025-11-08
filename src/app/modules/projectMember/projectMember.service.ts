@@ -31,8 +31,8 @@ import ProjectMember from './projectMember.model';
 // };
 
 import mongoose, { Types } from 'mongoose';
-import NormalUser from '../normalUser/normalUser.model';
 import Conversation from '../conversation/conversation.model';
+import NormalUser from '../normalUser/normalUser.model';
 
 const getAllProjectMember = async (
     projectId: string,
@@ -98,14 +98,14 @@ const getAllProjectMember = async (
     const aggResult = await ProjectMember.aggregate(pipeline);
     const result = aggResult[0]?.result || [];
     const total = aggResult[0]?.meta[0]?.total || 0;
-    const totalPage = Math.ceil(total / limit);
+    const totalPages = Math.ceil(total / limit);
 
     return {
         meta: {
             page,
             limit,
             total,
-            totalPage,
+            totalPages,
         },
         result,
     };

@@ -266,7 +266,7 @@ const getConversation = async (
             page,
             limit,
             total,
-            totalPage: Math.ceil(total / limit),
+            totalPages: Math.ceil(total / limit),
         },
         data: results,
     };
@@ -326,13 +326,13 @@ const getConversationMediaFiles = async (
 
     const urls = result.paginatedResults[0]?.media || [];
     const totalUrls = result.totalCount[0]?.count || 0;
-    const totalPages = Math.ceil(totalUrls / limit);
+    const totalPagess = Math.ceil(totalUrls / limit);
 
     return {
         meta: {
             page,
             limit,
-            totalPage: totalPages,
+            totalPages: totalPagess,
             total: totalUrls,
         },
         urls,

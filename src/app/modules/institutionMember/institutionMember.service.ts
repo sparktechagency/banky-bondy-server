@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import httpStatus from 'http-status';
-import AppError from '../../error/appError';
-import InstitutionMember from './institutionMember.model';
 import { Types } from 'mongoose';
+import AppError from '../../error/appError';
 import Institution from '../institution/institution.model';
+import InstitutionMember from './institutionMember.model';
 const getAllInstitutionMember = async (
     institutionId: string,
     query: Record<string, unknown>
@@ -81,13 +81,13 @@ const getAllInstitutionMember = async (
     const result = aggResult[0]?.result || [];
     const total = aggResult[0]?.meta?.[0]?.total ?? 0;
 
-    const totalPage = Math.ceil(total / limit);
+    const totalPages = Math.ceil(total / limit);
     return {
         meta: {
             page,
             limit,
             total,
-            totalPage,
+            totalPages,
         },
         result,
     };

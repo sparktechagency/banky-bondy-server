@@ -131,14 +131,14 @@ const getMessages = async (
 
     const result = messages[0]?.result || [];
     const total = messages[0]?.totalCount[0]?.total || 0;
-    const totalPage = Math.ceil(total / limit);
+    const totalPages = Math.ceil(total / limit);
 
     const response = {
         meta: {
             page,
             limit,
             total,
-            totalPage,
+            totalPages,
         },
         result,
     };
