@@ -1,9 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import config from '../config';
 import { ENUM_SUBSCRIPTION_TYPE } from '../modules/normalUser/normalUser.enum';
 import NormalUser from '../modules/normalUser/normalUser.model';
 
 const handleSubscriptionPaymentSuccess = async (
-    res: Response,
+    res: any,
     userId: string,
     transactionId: string,
     amount: number
