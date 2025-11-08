@@ -326,13 +326,13 @@ const getConversationMediaFiles = async (
 
     const urls = result.paginatedResults[0]?.media || [];
     const totalUrls = result.totalCount[0]?.count || 0;
-    const totalPagess = Math.ceil(totalUrls / limit);
+    const totalPages = Math.ceil(totalUrls / limit);
 
     return {
         meta: {
             page,
             limit,
-            totalPages: totalPagess,
+            totalPages: totalPages,
             total: totalUrls,
         },
         urls,
