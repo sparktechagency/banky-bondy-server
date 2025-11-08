@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable no-unused-vars */
 
 import httpStatus from 'http-status';
@@ -10,6 +11,8 @@ import registrationSuccessEmailBody from '../../mailTemplate/registerSucessEmail
 import sendEmail from '../../utilities/sendEmail';
 import { INormalUser } from '../normalUser/normalUser.interface';
 import NormalUser from '../normalUser/normalUser.model';
+import { IRecommendedUser } from '../recommendedUser/recommendedUser.interface';
+import { RecommendedUser } from '../recommendedUser/recommendedUser.model';
 import SuperAdmin from '../superAdmin/superAdmin.model';
 import { USER_ROLE } from './user.constant';
 import { TUser, TUserRole } from './user.interface';
@@ -19,7 +22,11 @@ const generateVerifyCode = (): number => {
     return Math.floor(100000 + Math.random() * 900000);
 };
 const registerUser = async (
-    payload: INormalUser & { password: string; confirmPassword: string }
+    payload: INormalUser & {
+        password: string;
+        confirmPassword: string;
+        recommendedUsers: IRecommendedUser[];
+    }
 ) => {
     const { password, confirmPassword, ...userData } = payload;
     if (password !== confirmPassword) {
@@ -62,6 +69,14 @@ const registerUser = async (
             { profileId: result[0]._id },
             { session }
         );
+        const updatedUsers = payload.recommendedUsers.map((rmUser: any) => {
+            return {
+                recommendBy: result[0]._id,
+                ...rmUser,
+                recommendByUserId: user[0]._id,
+            };
+        });
+        await RecommendedUser.insertMany(updatedUsers);
 
         sendEmail({
             email: userData.email,
@@ -211,11 +226,20 @@ cron.schedule('*/2 * * * *', async () => {
                 _id: { $in: expiredUserIds },
             });
 
+            // delete recommended users
+            const recommendedUserDeleteResult =
+                await RecommendedUser.deleteMany({
+                    recommendByUserId: { $in: expiredUserIds },
+                });
+
             console.log(
                 `Deleted ${userDeleteResult.deletedCount} expired inactive users`
             );
             console.log(
                 `Deleted ${normalUserDeleteResult.deletedCount} associated NormalUser documents`
+            );
+            console.log(
+                `Deleted ${recommendedUserDeleteResult.deletedCount} associated recommended user documents`
             );
         }
     } catch (error) {

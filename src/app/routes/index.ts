@@ -30,6 +30,7 @@ import { projectDocumentRoutes } from '../modules/projectDocument/projectDocumen
 import { projectImageRoutes } from '../modules/projectImage/projectImage.routes';
 import { projectJoinRequestRoutes } from '../modules/projectJoinRequest/projectJoinRequest.routes';
 import { projectMemberRoutes } from '../modules/projectMember/projectMember.routes';
+import { recommendedUserRoutes } from '../modules/recommendedUser/recommendedUser.routes';
 import { relativeRoutes } from '../modules/relative/relative.routes';
 import { reportRoutes } from '../modules/report/report.routes';
 import { skillRoutes } from '../modules/skill/skill.routes';
@@ -195,6 +196,10 @@ const moduleRoutes = [
     {
         path: '/bond-rating',
         router: bondRatingRoutes,
+    },
+    {
+        path: '/recommended-user',
+        router: recommendedUserRoutes,
     },
 ];
 
