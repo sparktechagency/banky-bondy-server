@@ -25,7 +25,7 @@ const registerUser = async (
     payload: INormalUser & {
         password: string;
         confirmPassword: string;
-        recommendedUsers: IRecommendedUser[];
+        recommendedUsers?: IRecommendedUser[];
     }
 ) => {
     const { password, confirmPassword, ...userData } = payload;
@@ -69,14 +69,17 @@ const registerUser = async (
             { profileId: result[0]._id },
             { session }
         );
-        const updatedUsers = payload.recommendedUsers.map((rmUser: any) => {
-            return {
-                recommendBy: result[0]._id,
-                ...rmUser,
-                recommendByUserId: user[0]._id,
-            };
-        });
-        await RecommendedUser.insertMany(updatedUsers);
+
+        if (payload.recommendedUsers && payload.recommendedUsers.length > 0) {
+            const updatedUsers = payload.recommendedUsers.map((rmUser: any) => {
+                return {
+                    recommendBy: result[0]._id,
+                    ...rmUser,
+                    recommendByUserId: user[0]._id,
+                };
+            });
+            await RecommendedUser.insertMany(updatedUsers);
+        }
 
         sendEmail({
             email: userData.email,
