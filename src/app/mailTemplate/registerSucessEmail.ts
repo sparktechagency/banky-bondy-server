@@ -81,15 +81,15 @@ const registrationSuccessEmailBody = (name: string, activationCode: number) => `
         </div>
         <div class="content">
           <h2>Hello, ${name}</h2>
-          <p>Thank you for registering with Banky Bondy. To activate your account, please use the following activation code:</p>
+          <p>Thank you for registering with Bakybondy. To activate your account, please use the following activation code:</p>
           <div class="activation-code">${activationCode || 'XXXXXX'}</div>
           <p>Enter this code on the activation page within the next 5 minutes. If you don't verify your account, it will be deleted and you’ll need to register again.</p>
           <p>If you didn’t register, just ignore this email.</p>
-          <p>If you have any questions, feel free to contact us at <a href="mailto:support@movementumstudio.com">support@movementumstudio.com</a>.</p>
+          <p>If you have any questions, feel free to contact us at <a href="mailto:emilioroo@gmail.com">emilioroo@gmail.com</a>.</p>
         </div>
         <div class="footer">
-          <p>&copy; ${new Date().getFullYear()} Banky Bondy. All rights reserved.</p>
-          <p><a href="https://movementumstudio.com/privacy">Privacy Policy</a> | <a href="https://movementumstudio.com/contact">Contact Us</a></p>
+          <p>&copy; ${new Date().getFullYear()} Bakybondy. Copyleft.</p>
+          <p><a href="https://bankybondy.com/en/privacy">Privacy Policy</a> | <a href="https://bankybondy.com/en/privacy">Contact Us</a></p>
         </div>
       </div>
     </body>

@@ -84,11 +84,11 @@ const resetPasswordEmailBody = (name: string, resetCode: number) => `
           <p>We received a request to reset your password. Please use the code below to proceed:</p>
           <div class="reset-code">${resetCode || 'XXXXXX'}</div>
           <p>Enter this code on the reset page within the next 5 minutes. If you didn’t request this, just ignore the email.</p>
-          <p>Need help? Contact us at <a href="mailto:support@movementumstudio.com">support@movementumstudio.com</a>.</p>
+          <p>Need help? Contact us at <a href="mailto:emilioroo@gmail.com">emilioroo@gmail.com</a>.</p>
         </div>
         <div class="footer">
           <p>&copy; ${new Date().getFullYear()} Banky Bondy. All rights reserved.</p>
-          <p><a href="https://movementumstudio.com/privacy">Privacy Policy</a> | <a href="https://movementumstudio.com/contact">Contact Us</a></p>
+          <p><a href="https://bankybondy.com/en/privacy">Privacy Policy</a> | <a href="https://bankybondy.com/en/privacy">Contact Us</a></p>
         </div>
       </div>
     </body>
