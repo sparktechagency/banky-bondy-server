@@ -54,12 +54,19 @@ const donate = async (userId: string, amount: number) => {
                     reference_id: ENUM_PAYMENT_PURPOSE.DONATE,
                 },
             ],
+            // application_context: {
+            //     brand_name: 'Your Business Name',
+            //     landing_page: 'LOGIN',
+            //     user_action: 'PAY_NOW',
+            //     return_url: `${config.paypal.payment_capture_url}`,
+            //     cancel_url: `${config.paypal.donation_cancel_url}`,
+            // },
             application_context: {
                 brand_name: 'Your Business Name',
-                landing_page: 'LOGIN',
+                landing_page: 'BILLING', // allows credit/debit card without login
                 user_action: 'PAY_NOW',
-                return_url: `${config.paypal.payment_capture_url}`,
-                cancel_url: `${config.paypal.donation_cancel_url}`,
+                return_url: config.paypal.payment_capture_url,
+                cancel_url: config.paypal.donation_cancel_url,
             },
         });
 
