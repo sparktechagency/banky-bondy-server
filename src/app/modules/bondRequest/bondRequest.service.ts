@@ -4,6 +4,7 @@ import QueryBuilder from '../../builder/QueryBuilder';
 import AppError from '../../error/appError';
 import { isTextSafe } from '../../helper/isTextSafe';
 import { generateEmbedding } from '../../utilities/embedding';
+import NormalUser from '../normalUser/normalUser.model';
 import { ENUM_BOND_REQUEST_STATUS } from './bondRequest.enum';
 import { IBondRequest } from './bondRequest.interface';
 import BondRequest from './bondRequest.model';
@@ -12,6 +13,22 @@ const createBondRequestIntoDB = async (
     userId: string,
     payload: IBondRequest
 ) => {
+    const [user, currentBondCount] = await Promise.all([
+        NormalUser.findById(userId),
+        BondRequest.countDocuments({ user: userId }),
+    ]);
+
+    if (!user) {
+        throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+    }
+
+    if (currentBondCount >= user.bondLimit) {
+        throw new AppError(
+            httpStatus.NOT_ACCEPTABLE,
+            'Bond request limit reached. Please upgrade your subscription.'
+        );
+    }
+
     const offerCheck = await isTextSafe(payload.offer);
 
     if (!offerCheck.safe)
@@ -30,6 +47,21 @@ const createBondRequestIntoDB = async (
         generateEmbedding(payload.offer),
         generateEmbedding(payload.want),
     ]);
+
+    if (!payload.location) {
+        const lastBondRequest = await BondRequest.findOne({
+            user: userId,
+        }).sort({ createdAt: -1 });
+
+        if (!lastBondRequest?.location) {
+            throw new AppError(
+                400,
+                'Location is required for your first bond request.'
+            );
+        }
+
+        payload.location = lastBondRequest.location;
+    }
 
     return await BondRequest.create({
         ...payload,

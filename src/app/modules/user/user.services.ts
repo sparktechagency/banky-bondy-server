@@ -9,6 +9,7 @@ import config from '../../config';
 import AppError from '../../error/appError';
 import registrationSuccessEmailBody from '../../mailTemplate/registerSucessEmail';
 import sendEmail from '../../utilities/sendEmail';
+import BondRequest from '../bondRequest/bondRequest.model';
 import { INormalUser } from '../normalUser/normalUser.interface';
 import NormalUser from '../normalUser/normalUser.model';
 import { IRecommendedUser } from '../recommendedUser/recommendedUser.interface';
@@ -195,9 +196,15 @@ const deleteUserAccount = async (user: JwtPayload, password: string) => {
 };
 
 const getMyProfile = async (userData: JwtPayload) => {
-    let result = null;
+    let result: any = null;
     if (userData.role === USER_ROLE.user) {
         result = await NormalUser.findOne({ email: userData.email });
+        const isBondExit = await BondRequest.findOne({ user: result._id });
+        if (isBondExit) {
+            result.isBondHave = true;
+        } else {
+            result.isBondHave = false;
+        }
     } else if (userData.role === USER_ROLE.superAdmin) {
         result = await SuperAdmin.findOne({ email: userData.email });
     }
