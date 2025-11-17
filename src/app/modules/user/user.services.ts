@@ -201,9 +201,15 @@ const getMyProfile = async (userData: JwtPayload) => {
         result = await NormalUser.findOne({ email: userData.email });
         const isBondExit = await BondRequest.findOne({ user: result._id });
         if (isBondExit) {
-            result.isBondHave = true;
+            result = {
+                ...result.toObject(),
+                isBondHave: true,
+            };
         } else {
-            result.isBondHave = false;
+            result = {
+                ...result.toObject(),
+                isBondHave: false,
+            };
         }
     } else if (userData.role === USER_ROLE.superAdmin) {
         result = await SuperAdmin.findOne({ email: userData.email });
