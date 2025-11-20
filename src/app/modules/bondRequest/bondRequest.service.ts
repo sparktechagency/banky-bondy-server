@@ -48,27 +48,18 @@ const createBondRequestIntoDB = async (
         generateEmbedding(payload.want),
     ]);
 
-    if (!payload.location) {
-        const lastBondRequest = await BondRequest.findOne({
-            user: userId,
-        }).sort({ createdAt: -1 });
-
-        if (!lastBondRequest?.location) {
-            throw new AppError(
-                400,
-                'Location is required for your first bond request.'
-            );
-        }
-
-        payload.location = lastBondRequest.location;
-    }
-
     return await BondRequest.create({
         ...payload,
         offerVector,
         wantVector,
         user: userId,
     });
+};
+
+const getLastBond = async (userId: string) => {
+    return await BondRequest.findOne({ user: userId })
+        .sort({ createdAt: -1 })
+        .select('offer want location');
 };
 
 const getAllBondRequests = async (query: Record<string, unknown>) => {
@@ -500,6 +491,7 @@ const bondRequestService = {
     deleteBondRequestFromDB,
     myBondRequests,
     getMatchingBondRequest,
+    getLastBond,
 };
 
 export default bondRequestService;

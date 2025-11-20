@@ -25,6 +25,15 @@ const getAllBondRequests = catchAsync(async (req, res) => {
         data: result,
     });
 });
+const getLastBond = catchAsync(async (req, res) => {
+    const result = await bondRequestService.getLastBond(req.user.profileId);
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: 'Last bond retrieved successfully',
+        data: result,
+    });
+});
 
 const getMyBondRequests = catchAsync(async (req, res) => {
     const result = await bondRequestService.myBondRequests(
@@ -98,6 +107,7 @@ const bondRequestController = {
     deleteBondRequest,
     getMyBondRequests,
     getMatchingBondRequest,
+    getLastBond,
 };
 
 export default bondRequestController;
