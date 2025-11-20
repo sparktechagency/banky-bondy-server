@@ -24,6 +24,11 @@ router.get(
     '/get-single-bond-request/:id',
     bondRequestController.getSingleBondRequest
 );
+router.get(
+    '/get-last-bond',
+    auth(USER_ROLE.user),
+    bondRequestController.getLastBond
+);
 
 router.patch(
     '/update/:id',
