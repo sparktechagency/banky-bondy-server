@@ -20,12 +20,12 @@ const handleDonationPaymentSuccess = async (
         );
     }
 
-    // 1️⃣ Update payment status
+    // 1️ Update payment status
     donation.status = ENUM_DONATE_STATUS.Paid;
 
     await donation.save();
 
-    // 6️⃣ Redirect back to frontend success page
+    // 2 Redirect back to frontend success page
     return res.redirect(
         `${config.paypal.donation_success_url}?donationId=${donationId}&transaction_id=${transactionId}&amount=${amount}`
     );
