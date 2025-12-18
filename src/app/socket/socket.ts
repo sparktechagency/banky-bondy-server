@@ -29,7 +29,8 @@ const initializeSocket = (server: HTTPServer) => {
                 ],
             },
         });
-        // online user------------------
+        // online user-----------------------
+        // const
         const onlineUser = new Set();
         io.on('connection', async (socket: Socket) => {
             // const userId = socket.handshake.query.id as string;
