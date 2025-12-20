@@ -1061,9 +1061,10 @@ export const getMatchingBondRequest = async (
         matchRequest: m.ids.map((id) => populatedMap.get(id)),
         matchScore: Number(m.score.toFixed(3)),
     }));
+    const cappedTotal = Math.min(total, 100);
 
     return {
-        total,
+        total: cappedTotal,
         page,
         limit,
         data: result,
