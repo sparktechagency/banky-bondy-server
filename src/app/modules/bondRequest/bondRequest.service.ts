@@ -5,6 +5,7 @@ import AppError from '../../error/appError';
 import { isTextSafe } from '../../helper/isTextSafe';
 import { generateEmbedding } from '../../utilities/embedding';
 import NormalUser from '../normalUser/normalUser.model';
+import { ENUM_BOND_REQUEST_STATUS } from './bondRequest.enum';
 import { IBondRequest } from './bondRequest.interface';
 import BondRequest from './bondRequest.model';
 
