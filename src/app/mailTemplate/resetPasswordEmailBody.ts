@@ -84,7 +84,7 @@ const resetPasswordEmailBody = (name: string, resetCode: number) => `
           <p>We received a request to reset your password. Please use the code below to proceed:</p>
           <div class="reset-code">${resetCode || 'XXXXXX'}</div>
           <p>Enter this code on the reset page within the next 5 minutes. If you didn’t request this, just ignore the email.</p>
-          <p>Need help? Contact us at <a href="mailto:emilioroo@gmail.com">emilioroo@gmail.com</a>.</p>
+          <p>Need help? Contact us at <a href="mailto:bankybondyar@gmail.com">bankybondyar@gmail.com</a>.</p>
         </div>
         <div class="footer">
           <p>&copy; ${new Date().getFullYear()} Banky Bondy. All rights reserved.</p>

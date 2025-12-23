@@ -85,7 +85,7 @@ const registrationSuccessEmailBody = (name: string, activationCode: number) => `
           <div class="activation-code">${activationCode || 'XXXXXX'}</div>
           <p>Enter this code on the activation page within the next 5 minutes. If you don't verify your account, it will be deleted and you’ll need to register again.</p>
           <p>If you didn’t register, just ignore this email.</p>
-          <p>If you have any questions, feel free to contact us at <a href="mailto:emilioroo@gmail.com">emilioroo@gmail.com</a>.</p>
+          <p>If you have any questions, feel free to contact us at <a href="mailto:bankybondyar@gmail.com">bankybondyar@gmail.com</a>.</p>
         </div>
         <div class="footer">
           <p>&copy; ${new Date().getFullYear()} Bakybondy. Copyleft.</p>
