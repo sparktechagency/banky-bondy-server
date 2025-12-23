@@ -835,7 +835,7 @@ export const getMatchingBondRequest = async (
 ) => {
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 10;
-    const minScore = 0.4;
+    const minScore = 0.2;
     const maxCycleSize = 5;
     const MIN_SCORE = Number(minScore);
 
