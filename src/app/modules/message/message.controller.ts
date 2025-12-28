@@ -16,5 +16,18 @@ const getMessages = catchAsync(async (req, res) => {
     });
 });
 
-const MessageController = { getMessages };
+const deleteMessage = catchAsync(async (req, res) => {
+    const result = await messageServices.deleteMessage(
+        req.params.id,
+        req.user.profileId
+    );
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: 'Message deleted successfully',
+        data: result,
+    });
+});
+
+const MessageController = { getMessages, deleteMessage };
 export default MessageController;

@@ -35,6 +35,10 @@ const messageSchema = new Schema<IMessage>(
             ref: 'Conversation',
             required: true,
         },
+        isDeleted: {
+            type: Boolean,
+            default: false,
+        },
     },
     {
         timestamps: true,

@@ -12,4 +12,5 @@ export interface IMessage {
     conversationId: ObjectId;
     createdAt: Date;
     updatedAt: Date;
+    isDeleted: boolean;
 }

@@ -146,8 +146,28 @@ const getMessages = async (
     return response;
 };
 
+const deleteMessage = async (messageId: string, userId: string) => {
+    const message = await Message.findOne({
+        _id: messageId,
+        msgByUserId: userId,
+    });
+    if (!message) {
+        throw new AppError(
+            httpStatus.NOT_FOUND,
+            'Message not found or you are not authorized to delete this message'
+        );
+    }
+    const result = await Message.findByIdAndUpdate(
+        messageId,
+        { isDeleted: true },
+        { new: true, runValidators: true }
+    );
+    return result;
+};
+
 const MessageService = {
     getMessages,
+    deleteMessage,
 };
 
 export default MessageService;

@@ -11,4 +11,10 @@ router.get(
     messageController.getMessages
 );
 
+router.delete(
+    '/delete-message/:id',
+    auth(USER_ROLE.user),
+    messageController.deleteMessage
+);
+
 export const messageRoutes = router;
