@@ -31,6 +31,7 @@ const audioSchema = new Schema<IAudio>(
             default: 0,
         },
         duration: { type: Number, required: true },
+        isBlocked: { type: Boolean, default: false },
     },
     { timestamps: true }
 );

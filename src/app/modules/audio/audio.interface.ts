@@ -12,6 +12,7 @@ export interface IAudio {
     duration: number;
     totalRating: number;
     ratingCount: number;
+    isBlocked: boolean;
     createdAt?: Date;
     updatedAt?: Date;
 }

@@ -9,6 +9,7 @@ import config from '../../config';
 import AppError from '../../error/appError';
 import registrationSuccessEmailBody from '../../mailTemplate/registerSucessEmail';
 import sendEmail from '../../utilities/sendEmail';
+import Audio from '../audio/audio.model';
 import { INormalUser } from '../normalUser/normalUser.interface';
 import NormalUser from '../normalUser/normalUser.model';
 import { IRecommendedUser } from '../recommendedUser/recommendedUser.interface';
@@ -261,6 +262,15 @@ const changeUserStatus = async (id: string) => {
         { isBlocked: !user.isBlocked },
         { new: true, runValidators: true }
     );
+
+    if (!user.isBlocked) {
+        await Audio.updateMany(
+            { user: id },
+            { isBlocked: true },
+            { new: true, runValidators: true }
+        );
+    }
+
     return result;
 };
 const userServices = {

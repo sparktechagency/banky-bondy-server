@@ -1,11 +1,11 @@
 import httpStatus from 'http-status';
-import AppError from '../../error/appError';
-import QueryBuilder from '../../builder/QueryBuilder';
-import Audio, { AudioRating } from './audio.model';
-import { IAudio } from './audio.interface';
-import { deleteFileFromS3 } from '../../helper/deleteFromS3';
 import mongoose from 'mongoose';
+import QueryBuilder from '../../builder/QueryBuilder';
+import AppError from '../../error/appError';
+import { deleteFileFromS3 } from '../../helper/deleteFromS3';
 import AudioBookmark from '../audioBookmark/audio.bookmark.model';
+import { IAudio } from './audio.interface';
+import Audio, { AudioRating } from './audio.model';
 
 // Create Audio
 const createAudio = async (userId: string, payload: IAudio) => {
@@ -16,7 +16,7 @@ const createAudio = async (userId: string, payload: IAudio) => {
 // Get All Audios with QueryBuilder
 const getAllAudios = async (query: Record<string, unknown>) => {
     const audioQuery = new QueryBuilder(
-        Audio.find().populate('audioTopic'),
+        Audio.find({ isBlocked: false }).populate('audioTopic'),
         query
     )
         .search(['title', 'description'])
