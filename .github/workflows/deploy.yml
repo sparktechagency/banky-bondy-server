@@ -47,7 +47,7 @@ jobs:
       - name: Build Project
         run: npm run build
 
-      # Configure SSH access to the EC2 instance
+      # Configure SSH access to the EC2 instance---
       - name: Configure SSH
         env:
           SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }} # SSH key for access
