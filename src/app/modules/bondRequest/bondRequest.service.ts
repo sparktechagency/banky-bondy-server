@@ -812,16 +812,16 @@ export const tokenOverlapRatio = (a?: string, b?: string): number => {
 // };
 export const calculateMatchScore = (
     wantVec: number[] = [],
-    offerVec: number[] = [],
-    wantText: string = '',
-    offerText: string = ''
+    offerVec: number[] = []
 ): number => {
+    // Rely 100% on the AI Cosine Similarity
     const sim = cosineSimilarity(wantVec, offerVec);
-    const overlap = tokenOverlapRatio(wantText, offerText);
 
-    // Change weight: 90% AI similarity, 10% exact word match
-    return 0.9 * sim + 0.1 * overlap;
+    // Optional: You can still use overlap as a small "bonus"
+    // but don't let it penalize the score if it's 0.
+    return sim;
 };
+
 // --- Helper for "surprise" scoring ---
 const calculateMatchScoreWithSurprise = (
     want: string,
@@ -832,9 +832,11 @@ const calculateMatchScoreWithSurprise = (
     const isSurprise = (s?: string) => normalizeText(s) === 'surprise';
     if (isSurprise(want)) {
         // Want = surprise → accept anything, give minimum high score
-        return 0.8 + 0.2 * calculateMatchScore(wantVec, offerVec, want, offer);
+        // return 0.8 + 0.2 * calculateMatchScore(wantVec, offerVec, want, offer);
+        return 0.8 + 0.2 * calculateMatchScore(wantVec, offerVec);
     }
-    return calculateMatchScore(wantVec, offerVec, want, offer);
+    // return calculateMatchScore(wantVec, offerVec, want, offer);
+    return calculateMatchScore(wantVec, offerVec);
 };
 
 export const isHighConfidenceMatch = (score: number) => score >= 0.7;
