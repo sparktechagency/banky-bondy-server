@@ -1074,7 +1074,7 @@ const deleteBondRequestFromDB = async (userId: string, id: string) => {
 // let's export all service functions together
 const SEMANTIC_WEIGHT = 0.85;
 const LEXICAL_WEIGHT = 0.15;
-const MATCH_THRESHOLD = 0.65;
+const MATCH_THRESHOLD = 0.4;
 const MAX_CANDIDATES = 200;
 const MAX_CYCLE_SIZE = 5;
 const normalizeText = (s = '') =>
