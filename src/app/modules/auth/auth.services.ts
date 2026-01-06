@@ -1,23 +1,23 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable no-unused-vars */
-import httpStatus from 'http-status';
-import AppError from '../../error/appError';
-import { User } from '../user/user.model';
-import { TLoginUser } from './auth.interface';
-import { ILoginWithGoogle, TUser, TUserRole } from '../user/user.interface';
-import { createToken, verifyToken } from '../user/user.utils';
-import config from '../../config';
-import { JwtPayload } from 'jsonwebtoken';
+import appleSigninAuth from 'apple-signin-auth';
+import axios from 'axios';
 import bcrypt from 'bcrypt';
+import { OAuth2Client } from 'google-auth-library';
+import httpStatus from 'http-status';
+import { JwtPayload } from 'jsonwebtoken';
+import mongoose from 'mongoose';
+import config from '../../config';
+import AppError from '../../error/appError';
 import resetPasswordEmailBody from '../../mailTemplate/resetPasswordEmailBody';
 import sendEmail from '../../utilities/sendEmail';
-import mongoose from 'mongoose';
-import { USER_ROLE } from '../user/user.constant';
 import NormalUser from '../normalUser/normalUser.model';
-import appleSigninAuth from 'apple-signin-auth';
-import { OAuth2Client } from 'google-auth-library';
+import { USER_ROLE } from '../user/user.constant';
+import { ILoginWithGoogle, TUser, TUserRole } from '../user/user.interface';
+import { User } from '../user/user.model';
+import { createToken, verifyToken } from '../user/user.utils';
+import { TLoginUser } from './auth.interface';
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-import axios from 'axios';
 const generateVerifyCode = (): number => {
     return Math.floor(100000 + Math.random() * 900000);
 };
