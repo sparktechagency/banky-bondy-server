@@ -800,6 +800,16 @@ export const tokenOverlapRatio = (a?: string, b?: string): number => {
     return overlap / Math.min(A.length, B.length);
 };
 
+// export const calculateMatchScore = (
+//     wantVec: number[] = [],
+//     offerVec: number[] = [],
+//     wantText: string = '',
+//     offerText: string = ''
+// ): number => {
+//     const sim = cosineSimilarity(wantVec, offerVec);
+//     const overlap = tokenOverlapRatio(wantText, offerText);
+//     return 0.7 * sim + 0.3 * overlap;
+// };
 export const calculateMatchScore = (
     wantVec: number[] = [],
     offerVec: number[] = [],
@@ -808,9 +818,10 @@ export const calculateMatchScore = (
 ): number => {
     const sim = cosineSimilarity(wantVec, offerVec);
     const overlap = tokenOverlapRatio(wantText, offerText);
-    return 0.7 * sim + 0.3 * overlap;
-};
 
+    // Change weight: 90% AI similarity, 10% exact word match
+    return 0.9 * sim + 0.1 * overlap;
+};
 // --- Helper for "surprise" scoring ---
 const calculateMatchScoreWithSurprise = (
     want: string,
