@@ -1072,11 +1072,234 @@ const deleteBondRequestFromDB = async (userId: string, id: string) => {
 // };
 
 // let's export all service functions together
+// const SEMANTIC_WEIGHT = 0.85;
+// const LEXICAL_WEIGHT = 0.15;
+// const MATCH_THRESHOLD = 0.4;
+// const MAX_CANDIDATES = 200;
+// const MAX_CYCLE_SIZE = 5;
+// const normalizeText = (s = '') =>
+//     s
+//         .toLowerCase()
+//         .replace(/[^\w\s]/g, ' ')
+//         .replace(/\s+/g, ' ')
+//         .trim();
+
+// const isEmpty = (s?: string) => normalizeText(s) === 'empty';
+// const isSurprise = (s?: string) => normalizeText(s) === 'surprise';
+// export const cosineSimilarity = (a: number[], b: number[]) => {
+//     if (!a?.length || !b?.length) return 0;
+//     let dot = 0,
+//         magA = 0,
+//         magB = 0;
+//     for (let i = 0; i < a.length; i++) {
+//         dot += a[i] * b[i];
+//         magA += a[i] ** 2;
+//         magB += b[i] ** 2;
+//     }
+//     return dot / (Math.sqrt(magA) * Math.sqrt(magB));
+// };
+
+// const tokenOverlapRatio = (a = '', b = '') => {
+//     const A = normalizeText(a).split(' ').filter(Boolean);
+//     const B = new Set(normalizeText(b).split(' ').filter(Boolean));
+//     if (!A.length || !B.size) return 0;
+//     return A.filter((t) => B.has(t)).length / Math.min(A.length, B.size);
+// };
+
+// const calculateFinalScore = (
+//     want: string,
+//     wantVec: number[],
+//     offer: string,
+//     offerVec: number[]
+// ) => {
+//     const semantic = cosineSimilarity(wantVec, offerVec);
+//     const lexical = tokenOverlapRatio(want, offer);
+
+//     // Boost short sentences
+//     const shortBoost =
+//         want.split(' ').length <= 3 || offer.split(' ').length <= 3 ? 0.05 : 0;
+
+//     return semantic * SEMANTIC_WEIGHT + lexical * LEXICAL_WEIGHT + shortBoost;
+// };
+
+// const passesFastFilter = (want: string, offer: string) => {
+//     if (isSurprise(want)) return true;
+//     if (isEmpty(want) || isEmpty(offer)) return false;
+//     return true;
+// };
+// export const getMatchingBondRequest = async (
+//     userId: string,
+//     bondRequestId: string,
+//     query: Record<string, unknown>
+// ) => {
+//     const page = Number(query.page) || 1;
+//     const limit = Number(query.limit) || 10;
+
+//     // 1️⃣ Load start request
+//     const start = await BondRequest.findOne({
+//         _id: bondRequestId,
+//         user: userId,
+//         status: ENUM_BOND_REQUEST_STATUS.WAITING_FOR_LINK,
+//         isPause: false,
+//     })
+//         .select('offer want offerVector wantVector location radius user')
+//         .lean();
+
+//     if (!start) throw new AppError(404, 'Bond request not found');
+
+//     // 2️⃣ Ensure embeddings
+//     if (!start.offerVector?.length)
+//         start.offerVector = await generateEmbedding(start.offer);
+//     if (!start.wantVector?.length)
+//         start.wantVector = await generateEmbedding(start.want);
+
+//     // 3️⃣ Geo filter
+//     const geoFilter: any = {};
+//     if (start.location && start.radius) {
+//         const [lng, lat] = start.location.coordinates;
+//         geoFilter.location = {
+//             $geoWithin: {
+//                 $centerSphere: [[lng, lat], start.radius / 6371],
+//             },
+//         };
+//     }
+
+//     // 4️⃣ Fetch candidates (FAST)
+//     const candidates = await BondRequest.find({
+//         _id: { $ne: bondRequestId },
+//         user: { $ne: userId },
+//         status: ENUM_BOND_REQUEST_STATUS.WAITING_FOR_LINK,
+//         isPause: false,
+//         ...geoFilter,
+//     })
+//         .select('offer want offerVector wantVector user')
+//         .limit(MAX_CANDIDATES)
+//         .lean();
+
+//     const matches: { ids: string[]; score: number }[] = [];
+//     const seen = new Set<string>();
+
+//     // 5️⃣ Pairwise semantic match
+//     for (const c of candidates) {
+//         if (!passesFastFilter(start.want, c.offer)) continue;
+//         if (!passesFastFilter(c.want, start.offer)) continue;
+
+//         if (!c.offerVector?.length)
+//             c.offerVector = await generateEmbedding(c.offer);
+//         if (!c.wantVector?.length)
+//             c.wantVector = await generateEmbedding(c.want);
+
+//         const scoreA = calculateFinalScore(
+//             start.want,
+//             start.wantVector,
+//             c.offer,
+//             c.offerVector
+//         );
+
+//         const scoreB = calculateFinalScore(
+//             c.want,
+//             c.wantVector,
+//             start.offer,
+//             start.offerVector
+//         );
+
+//         if (scoreA >= MATCH_THRESHOLD && scoreB >= MATCH_THRESHOLD) {
+//             const avg = (scoreA + scoreB) / 2;
+//             const key = [bondRequestId, c._id.toString()].sort().join('-');
+//             if (!seen.has(key)) {
+//                 seen.add(key);
+//                 matches.push({
+//                     ids: [bondRequestId, c._id.toString()],
+//                     score: avg,
+//                 });
+//             }
+//         }
+//     }
+
+//     // 6️⃣ Cycle detection (unchanged, optimized)
+//     const requestMap = new Map<string, any>();
+//     requestMap.set(bondRequestId, start);
+//     candidates.forEach((c) => requestMap.set(c._id.toString(), c));
+
+//     const edges = new Map<string, { to: string; score: number }[]>();
+
+//     for (const [id, r] of requestMap) {
+//         edges.set(id, []);
+//         for (const [toId, t] of requestMap) {
+//             if (id === toId) continue;
+//             if (!passesFastFilter(r.want, t.offer)) continue;
+
+//             const score = calculateFinalScore(
+//                 r.want,
+//                 r.wantVector,
+//                 t.offer,
+//                 t.offerVector
+//             );
+
+//             if (score >= MATCH_THRESHOLD)
+//                 edges.get(id)!.push({ to: toId, score });
+//         }
+//     }
+
+//     // DFS
+//     const cycles = new Set<string>();
+//     const dfs = (
+//         startId: string,
+//         curr: string,
+//         path: string[],
+//         score: number
+//     ) => {
+//         if (path.length > MAX_CYCLE_SIZE) return;
+
+//         for (const { to, score: s } of edges.get(curr) || []) {
+//             if (path.includes(to)) {
+//                 if (to === startId && path.length >= 3) {
+//                     const hash = path.join('-');
+//                     if (!cycles.has(hash)) {
+//                         cycles.add(hash);
+//                         matches.push({ ids: [...path], score });
+//                     }
+//                 }
+//                 continue;
+//             }
+//             dfs(startId, to, [...path, to], (score + s) / 2);
+//         }
+//     };
+
+//     dfs(bondRequestId, bondRequestId, [bondRequestId], 1);
+
+//     // 7️⃣ Populate
+//     const ids = [...new Set(matches.flatMap((m) => m.ids))];
+//     const populated = await BondRequest.find({ _id: { $in: ids } })
+//         .select('-offerVector -wantVector')
+//         .populate('user', 'name profile_image')
+//         .lean();
+
+//     const map = new Map(populated.map((p) => [p._id.toString(), p]));
+
+//     const result = matches
+//         .sort((a, b) => b.score - a.score)
+//         .slice((page - 1) * limit, page * limit)
+//         .map((m) => ({
+//             matchRequest: m.ids.map((id) => map.get(id)),
+//             matchScore: Number(m.score.toFixed(3)),
+//         }));
+
+//     return {
+//         total: Math.min(matches.length, 100),
+//         page,
+//         limit,
+//         data: result,
+//     };
+// };
+
+// playing playing playing
 const SEMANTIC_WEIGHT = 0.85;
 const LEXICAL_WEIGHT = 0.15;
-const MATCH_THRESHOLD = 0.4;
+const MATCH_THRESHOLD = 0.5; // safer threshold than 0.4
 const MAX_CANDIDATES = 200;
 const MAX_CYCLE_SIZE = 5;
+
 const normalizeText = (s = '') =>
     s
         .toLowerCase()
@@ -1086,16 +1309,19 @@ const normalizeText = (s = '') =>
 
 const isEmpty = (s?: string) => normalizeText(s) === 'empty';
 const isSurprise = (s?: string) => normalizeText(s) === 'surprise';
+
 export const cosineSimilarity = (a: number[], b: number[]) => {
     if (!a?.length || !b?.length) return 0;
     let dot = 0,
         magA = 0,
         magB = 0;
-    for (let i = 0; i < a.length; i++) {
+    const minLen = Math.min(a.length, b.length); // safeguard
+    for (let i = 0; i < minLen; i++) {
         dot += a[i] * b[i];
         magA += a[i] ** 2;
         magB += b[i] ** 2;
     }
+    if (!magA || !magB) return 0;
     return dot / (Math.sqrt(magA) * Math.sqrt(magB));
 };
 
@@ -1112,18 +1338,22 @@ const calculateFinalScore = (
     offer: string,
     offerVec: number[]
 ) => {
-    if (isSurprise(want)) return 0.8;
-
     const semantic = cosineSimilarity(wantVec, offerVec);
     const lexical = tokenOverlapRatio(want, offer);
 
-    return semantic * SEMANTIC_WEIGHT + lexical * LEXICAL_WEIGHT;
+    // Boost short sentences
+    const shortBoost =
+        want.split(' ').length <= 3 || offer.split(' ').length <= 3 ? 0.05 : 0;
+
+    return semantic * SEMANTIC_WEIGHT + lexical * LEXICAL_WEIGHT + shortBoost;
 };
+
 const passesFastFilter = (want: string, offer: string) => {
     if (isSurprise(want)) return true;
     if (isEmpty(want) || isEmpty(offer)) return false;
     return true;
 };
+
 export const getMatchingBondRequest = async (
     userId: string,
     bondRequestId: string,
@@ -1132,7 +1362,7 @@ export const getMatchingBondRequest = async (
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 10;
 
-    // 1️⃣ Load start request
+    // 1️⃣ Load starting bond request
     const start = await BondRequest.findOne({
         _id: bondRequestId,
         user: userId,
@@ -1161,7 +1391,7 @@ export const getMatchingBondRequest = async (
         };
     }
 
-    // 4️⃣ Fetch candidates (FAST)
+    // 4️⃣ Fetch candidates
     const candidates = await BondRequest.find({
         _id: { $ne: bondRequestId },
         user: { $ne: userId },
@@ -1173,10 +1403,10 @@ export const getMatchingBondRequest = async (
         .limit(MAX_CANDIDATES)
         .lean();
 
-    const matches: { ids: string[]; score: number }[] = [];
-    const seen = new Set<string>();
+    // 5️⃣ Direct pair matches
+    const directMatches: { ids: string[]; score: number }[] = [];
+    const seenPairs = new Set<string>();
 
-    // 5️⃣ Pairwise semantic match
     for (const c of candidates) {
         if (!passesFastFilter(start.want, c.offer)) continue;
         if (!passesFastFilter(c.want, start.offer)) continue;
@@ -1192,7 +1422,6 @@ export const getMatchingBondRequest = async (
             c.offer,
             c.offerVector
         );
-
         const scoreB = calculateFinalScore(
             c.want,
             c.wantVector,
@@ -1203,9 +1432,9 @@ export const getMatchingBondRequest = async (
         if (scoreA >= MATCH_THRESHOLD && scoreB >= MATCH_THRESHOLD) {
             const avg = (scoreA + scoreB) / 2;
             const key = [bondRequestId, c._id.toString()].sort().join('-');
-            if (!seen.has(key)) {
-                seen.add(key);
-                matches.push({
+            if (!seenPairs.has(key)) {
+                seenPairs.add(key);
+                directMatches.push({
                     ids: [bondRequestId, c._id.toString()],
                     score: avg,
                 });
@@ -1213,13 +1442,12 @@ export const getMatchingBondRequest = async (
         }
     }
 
-    // 6️⃣ Cycle detection (unchanged, optimized)
+    // 6️⃣ Build request map and edges for DFS chains
     const requestMap = new Map<string, any>();
     requestMap.set(bondRequestId, start);
     candidates.forEach((c) => requestMap.set(c._id.toString(), c));
 
     const edges = new Map<string, { to: string; score: number }[]>();
-
     for (const [id, r] of requestMap) {
         edges.set(id, []);
         for (const [toId, t] of requestMap) {
@@ -1232,41 +1460,63 @@ export const getMatchingBondRequest = async (
                 t.offer,
                 t.offerVector
             );
-
             if (score >= MATCH_THRESHOLD)
                 edges.get(id)!.push({ to: toId, score });
         }
     }
 
-    // DFS
+    // 7️⃣ DFS for cycles >=3 users
+    const chainMatches: { ids: string[]; score: number }[] = [];
     const cycles = new Set<string>();
+
     const dfs = (
         startId: string,
         curr: string,
         path: string[],
-        score: number
+        score: number,
+        usersInPath: Set<string>
     ) => {
         if (path.length > MAX_CYCLE_SIZE) return;
 
         for (const { to, score: s } of edges.get(curr) || []) {
+            const toUserId = requestMap.get(to)?.user?.toString();
+            if (usersInPath.has(toUserId)) continue; // prevent same user twice
+
             if (path.includes(to)) {
                 if (to === startId && path.length >= 3) {
                     const hash = path.join('-');
                     if (!cycles.has(hash)) {
                         cycles.add(hash);
-                        matches.push({ ids: [...path], score });
+                        chainMatches.push({ ids: [...path], score });
                     }
                 }
                 continue;
             }
-            dfs(startId, to, [...path, to], (score + s) / 2);
+
+            dfs(
+                startId,
+                to,
+                [...path, to],
+                (score + s) / 2,
+                new Set([...usersInPath, toUserId])
+            );
         }
     };
 
-    dfs(bondRequestId, bondRequestId, [bondRequestId], 1);
+    dfs(
+        bondRequestId,
+        bondRequestId,
+        [bondRequestId],
+        1,
+        new Set([start.user.toString()])
+    );
 
-    // 7️⃣ Populate
-    const ids = [...new Set(matches.flatMap((m) => m.ids))];
+    // 8️⃣ Combine direct matches + DFS chains
+    const allMatches = [...directMatches, ...chainMatches];
+    allMatches.sort((a, b) => b.score - a.score);
+
+    // 9️⃣ Populate final results
+    const ids = [...new Set(allMatches.flatMap((m) => m.ids))];
     const populated = await BondRequest.find({ _id: { $in: ids } })
         .select('-offerVector -wantVector')
         .populate('user', 'name profile_image')
@@ -1274,8 +1524,7 @@ export const getMatchingBondRequest = async (
 
     const map = new Map(populated.map((p) => [p._id.toString(), p]));
 
-    const result = matches
-        .sort((a, b) => b.score - a.score)
+    const result = allMatches
         .slice((page - 1) * limit, page * limit)
         .map((m) => ({
             matchRequest: m.ids.map((id) => map.get(id)),
@@ -1283,7 +1532,7 @@ export const getMatchingBondRequest = async (
         }));
 
     return {
-        total: Math.min(matches.length, 100),
+        total: Math.min(allMatches.length, 100),
         page,
         limit,
         data: result,
