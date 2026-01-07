@@ -869,21 +869,7 @@ export const getMatchingBondRequest = async (
 
     if (!startRequest) throw new AppError(404, 'Bond request not found');
 
-    // 2. Ensure embeddings exist
-    if (!startRequest.offerVector || !startRequest.offerVector.length) {
-        throw new AppError(
-            httpStatus.UNPROCESSABLE_ENTITY,
-            'This bond request is incomplete. Please recreate the bond.'
-        );
-    }
-    if (!startRequest.wantVector || !startRequest.wantVector.length) {
-        throw new AppError(
-            httpStatus.UNPROCESSABLE_ENTITY,
-            'This bond request is incomplete. Please recreate the bond.'
-        );
-    }
-
-    // 3. Geo filter
+    // 2. Geo filter
     const geoFilter: any = {};
     if (startRequest.location && startRequest.radius) {
         const [lng, lat] = startRequest.location.coordinates;
@@ -894,17 +880,7 @@ export const getMatchingBondRequest = async (
         };
     }
 
-    // 4. Fetch candidates
-    // const candidates = await BondRequest.find({
-    //     _id: { $ne: bondRequestId },
-    //     user: { $ne: userId },
-    //     status: ENUM_BOND_REQUEST_STATUS.WAITING_FOR_LINK,
-    //     isPause: false,
-    //     ...geoFilter,
-    // })
-    //     .select('_id user offer want offerVector wantVector location radius')
-    //     .lean();
-
+    // 3. Fetch candidates
     const candidates = await BondRequest.aggregate([
         {
             $match: {
@@ -933,7 +909,7 @@ export const getMatchingBondRequest = async (
     const matches: { ids: string[]; score: number }[] = [];
     const globalSeen = new Set<string>();
 
-    // 5. Pairwise matches
+    // 4. Pairwise matches
     for (const candidate of candidates) {
         const startOfferEmpty = isEmpty(startRequest.offer);
         const startWantEmpty = isEmpty(startRequest.want);
@@ -978,7 +954,7 @@ export const getMatchingBondRequest = async (
         }
     }
 
-    // 6. Build edges for cycles
+    // 5. Build edges for cycles
     const requestMap = new Map<string, any>(
         candidates.map((c) => [c._id.toString(), c])
     );
@@ -986,19 +962,6 @@ export const getMatchingBondRequest = async (
 
     const edges: Map<string, { to: string; score: number }[]> = new Map();
     for (const [id, req] of requestMap.entries()) {
-        if (!req.offerVector || !req.offerVector.length) {
-            throw new AppError(
-                httpStatus.UNPROCESSABLE_ENTITY,
-                'This bond request is incomplete. Please recreate the bond.'
-            );
-        }
-        if (!req.wantVector || !req.wantVector.length) {
-            throw new AppError(
-                httpStatus.UNPROCESSABLE_ENTITY,
-                'This bond request is incomplete. Please recreate the bond.'
-            );
-        }
-
         edges.set(id, []);
         for (const [toId, toReq] of requestMap.entries()) {
             if (id === toId) continue;
@@ -1018,7 +981,7 @@ export const getMatchingBondRequest = async (
         }
     }
 
-    // 7. DFS to find cycles
+    // 6. DFS to find cycles
     const seenCycles = new Set<string>();
     const dfs = (
         startId: string,
@@ -1064,7 +1027,7 @@ export const getMatchingBondRequest = async (
 
     dfs(bondRequestId, bondRequestId, [bondRequestId], 1);
 
-    // 8. Populate final results
+    // 7. Populate final results
     const allIds = [...new Set(matches.flatMap((m) => m.ids))];
     const populated = await BondRequest.find({ _id: { $in: allIds } })
         .select('-wantVector -offerVector')
