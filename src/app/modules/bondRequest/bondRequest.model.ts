@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Schema, model } from 'mongoose';
 import { ENUM_BOND_REQUEST_STATUS } from './bondRequest.enum';
 import { IBondRequest } from './bondRequest.interface';
@@ -38,8 +39,16 @@ const BondRequestSchema = new Schema<IBondRequest>(
             type: Boolean,
             default: false,
         },
-        offerVector: { type: [Number] },
-        wantVector: { type: [Number] },
+        offerVector: {
+            type: [Number],
+            required: true,
+            validate: (v: any) => Array.isArray(v) && v.length > 0,
+        },
+        wantVector: {
+            type: [Number],
+            required: true,
+            validate: (v: any) => Array.isArray(v) && v.length > 0,
+        },
     },
     {
         timestamps: true,

@@ -800,16 +800,6 @@ export const tokenOverlapRatio = (a?: string, b?: string): number => {
     return overlap / Math.min(A.length, B.length);
 };
 
-// export const calculateMatchScore = (
-//     wantVec: number[] = [],
-//     offerVec: number[] = [],
-//     wantText: string = '',
-//     offerText: string = ''
-// ): number => {
-//     const sim = cosineSimilarity(wantVec, offerVec);
-//     const overlap = tokenOverlapRatio(wantText, offerText);
-//     return 0.7 * sim + 0.3 * overlap;
-// };
 export const calculateMatchScore = (
     wantVec: number[] = [],
     offerVec: number[] = []
@@ -855,14 +845,6 @@ export const getMatchingBondRequest = async (
     const isEmpty = (s?: string) => normalizeText(s) === 'empty';
     const isSurprise = (s?: string) => normalizeText(s) === 'surprise';
 
-    // --- Matching rules ---
-    // const isValidMatch = (want: string, offer: string): boolean => {
-    //     const wantSurprise = isSurprise(want);
-    //     const offerSurprise = isSurprise(offer);
-    //     if (wantSurprise) return true; // Want surprise → accept anything
-    //     if (offerSurprise) return wantSurprise; // Offer surprise → only matches if want surprise
-    //     return tokenOverlapRatio(want, offer) > 0; // Specific wants → must match
-    // };
     const isValidMatch = (want: string, offer: string): boolean => {
         const wantSurprise = isSurprise(want);
         const offerSurprise = isSurprise(offer);
@@ -888,17 +870,15 @@ export const getMatchingBondRequest = async (
 
     // 2. Ensure embeddings exist
     if (!startRequest.offerVector || !startRequest.offerVector.length) {
-        startRequest.offerVector = await generateEmbedding(startRequest.offer);
-        await BondRequest.updateOne(
-            { _id: startRequest._id },
-            { offerVector: startRequest.offerVector }
+        throw new AppError(
+            httpStatus.UNPROCESSABLE_ENTITY,
+            'This bond request is incomplete. Please recreate the bond.'
         );
     }
     if (!startRequest.wantVector || !startRequest.wantVector.length) {
-        startRequest.wantVector = await generateEmbedding(startRequest.want);
-        await BondRequest.updateOne(
-            { _id: startRequest._id },
-            { wantVector: startRequest.wantVector }
+        throw new AppError(
+            httpStatus.UNPROCESSABLE_ENTITY,
+            'This bond request is incomplete. Please recreate the bond.'
         );
     }
 
@@ -927,21 +907,7 @@ export const getMatchingBondRequest = async (
     const matches: { ids: string[]; score: number }[] = [];
     const globalSeen = new Set<string>();
 
-    // 5. Ensure embeddings for candidates
-    for (const candidate of candidates) {
-        if (!candidate.offerVector || !candidate.offerVector.length) {
-            candidate.offerVector = await generateEmbedding(
-                candidate.offer || ''
-            );
-        }
-        if (!candidate.wantVector || !candidate.wantVector.length) {
-            candidate.wantVector = await generateEmbedding(
-                candidate.want || ''
-            );
-        }
-    }
-
-    // 6. Pairwise matches
+    // 5. Pairwise matches
     for (const candidate of candidates) {
         const startOfferEmpty = isEmpty(startRequest.offer);
         const startWantEmpty = isEmpty(startRequest.want);
@@ -986,7 +952,7 @@ export const getMatchingBondRequest = async (
         }
     }
 
-    // 7. Build edges for cycles
+    // 6. Build edges for cycles
     const requestMap = new Map<string, any>(
         candidates.map((c) => [c._id.toString(), c])
     );
@@ -995,10 +961,16 @@ export const getMatchingBondRequest = async (
     const edges: Map<string, { to: string; score: number }[]> = new Map();
     for (const [id, req] of requestMap.entries()) {
         if (!req.offerVector || !req.offerVector.length) {
-            req.offerVector = await generateEmbedding(req.offer || '');
+            throw new AppError(
+                httpStatus.UNPROCESSABLE_ENTITY,
+                'This bond request is incomplete. Please recreate the bond.'
+            );
         }
         if (!req.wantVector || !req.wantVector.length) {
-            req.wantVector = await generateEmbedding(req.want || '');
+            throw new AppError(
+                httpStatus.UNPROCESSABLE_ENTITY,
+                'This bond request is incomplete. Please recreate the bond.'
+            );
         }
 
         edges.set(id, []);
@@ -1020,7 +992,7 @@ export const getMatchingBondRequest = async (
         }
     }
 
-    // 8. DFS to find cycles
+    // 7. DFS to find cycles
     const seenCycles = new Set<string>();
     const dfs = (
         startId: string,
@@ -1066,7 +1038,7 @@ export const getMatchingBondRequest = async (
 
     dfs(bondRequestId, bondRequestId, [bondRequestId], 1);
 
-    // 9. Populate final results
+    // 8. Populate final results
     const allIds = [...new Set(matches.flatMap((m) => m.ids))];
     const populated = await BondRequest.find({ _id: { $in: allIds } })
         .select('-wantVector -offerVector')
