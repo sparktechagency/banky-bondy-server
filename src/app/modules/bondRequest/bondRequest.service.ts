@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import httpStatus from 'http-status';
+import mongoose from 'mongoose';
 import QueryBuilder from '../../builder/QueryBuilder';
 import AppError from '../../error/appError';
 import { isTextSafe } from '../../helper/isTextSafe';
@@ -894,15 +895,40 @@ export const getMatchingBondRequest = async (
     }
 
     // 4. Fetch candidates
-    const candidates = await BondRequest.find({
-        _id: { $ne: bondRequestId },
-        user: { $ne: userId },
-        status: ENUM_BOND_REQUEST_STATUS.WAITING_FOR_LINK,
-        isPause: false,
-        ...geoFilter,
-    })
-        .select('_id user offer want offerVector wantVector location radius')
-        .lean();
+    // const candidates = await BondRequest.find({
+    //     _id: { $ne: bondRequestId },
+    //     user: { $ne: userId },
+    //     status: ENUM_BOND_REQUEST_STATUS.WAITING_FOR_LINK,
+    //     isPause: false,
+    //     ...geoFilter,
+    // })
+    //     .select('_id user offer want offerVector wantVector location radius')
+    //     .lean();
+
+    const candidates = await BondRequest.aggregate([
+        {
+            $match: {
+                _id: { $ne: new mongoose.Types.ObjectId(bondRequestId) },
+                user: { $ne: new mongoose.Types.ObjectId(userId) },
+                status: ENUM_BOND_REQUEST_STATUS.WAITING_FOR_LINK,
+                isPause: false,
+                ...geoFilter,
+            },
+        },
+        { $sample: { size: 150 } },
+        {
+            $project: {
+                _id: 1,
+                user: 1,
+                offer: 1,
+                want: 1,
+                offerVector: 1,
+                wantVector: 1,
+                location: 1,
+                radius: 1,
+            },
+        },
+    ]);
 
     const matches: { ids: string[]; score: number }[] = [];
     const globalSeen = new Set<string>();
