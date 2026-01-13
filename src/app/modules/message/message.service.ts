@@ -115,6 +115,7 @@ const getMessages = async (
                 conversationId: 1,
                 createdAt: 1,
                 updatedAt: 1,
+                isDeleted: 1,
                 'userDetails.name': 1,
                 'userDetails.profile_image': 1,
                 isMyMessage: 1,
