@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import httpStatus from 'http-status';
@@ -776,6 +777,275 @@ export const isHighConfidenceMatch = (score: number) => score >= 0.7;
 //     };
 // };
 
+// type MatchType = 'entry' | 'surprise' | 'empty';
+
+// export const getMatchingBondRequest = async (
+//     userId: string,
+//     bondRequestId: string,
+//     query: Record<string, unknown>
+// ) => {
+//     const page = Number(query.page) || 1;
+//     const limit = Number(query.limit) || 10;
+//     const MIN_SCORE = 0.4;
+//     const maxCycleSize = 5;
+
+//     const normalize = (s?: string) => normalizeText(s);
+//     const isEmpty = (s?: string) => normalize(s) === 'empty';
+
+//     // ✅ ENTRY > SURPRISE > EMPTY (candidate-only)
+//     const getPairMatchType = (candidate: any): MatchType => {
+//         const want = normalize(candidate.want);
+//         const offer = normalize(candidate.offer);
+
+//         if (want === 'empty' || offer === 'empty') return 'empty';
+//         if (want === 'surprise' || offer === 'surprise') return 'surprise';
+//         return 'entry';
+//     };
+
+//     // eslint-disable-next-line @typescript-eslint/no-unused-vars
+//     const isValidMatch = (want: string, offer: string) => true;
+
+//     // 1️⃣ Fetch start request
+//     const startRequest = await BondRequest.findOne({
+//         _id: bondRequestId,
+//         user: userId,
+//         status: ENUM_BOND_REQUEST_STATUS.WAITING_FOR_LINK,
+//         isPause: false,
+//     })
+//         .select('offer want offerVector wantVector location radius user')
+//         .lean();
+
+//     if (!startRequest) throw new AppError(404, 'Bond request not found');
+
+//     // 2️⃣ Geo filter
+//     const geoFilter: any = {};
+//     if (startRequest.location && startRequest.radius) {
+//         const [lng, lat] = startRequest.location.coordinates;
+//         geoFilter.location = {
+//             $geoWithin: {
+//                 $centerSphere: [[lng, lat], startRequest.radius / 6371],
+//             },
+//         };
+//     }
+
+//     // 3️⃣ Fetch candidates
+//     const candidates = await BondRequest.aggregate([
+//         {
+//             $match: {
+//                 _id: { $ne: new mongoose.Types.ObjectId(bondRequestId) },
+//                 user: { $ne: new mongoose.Types.ObjectId(userId) },
+//                 status: ENUM_BOND_REQUEST_STATUS.WAITING_FOR_LINK,
+//                 isPause: false,
+//                 ...geoFilter,
+//             },
+//         },
+//         { $sample: { size: 150 } },
+//         {
+//             $project: {
+//                 _id: 1,
+//                 user: 1,
+//                 offer: 1,
+//                 want: 1,
+//                 offerVector: 1,
+//                 wantVector: 1,
+//             },
+//         },
+//     ]);
+
+//     const matches: {
+//         ids: string[];
+//         score: number;
+//         type: MatchType;
+//     }[] = [];
+
+//     const globalSeen = new Set<string>();
+
+//     // 4️⃣ Pairwise (2-person) matches
+//     for (const candidate of candidates) {
+//         const startOfferEmpty = isEmpty(startRequest.offer);
+//         const startWantEmpty = isEmpty(startRequest.want);
+//         const candidateOfferEmpty = isEmpty(candidate.offer);
+//         const candidateWantEmpty = isEmpty(candidate.want);
+
+//         if (
+//             (startOfferEmpty && !candidateWantEmpty) ||
+//             (startWantEmpty && !candidateOfferEmpty)
+//         ) {
+//             continue;
+//         }
+
+//         if (!isValidMatch(startRequest.want, candidate.offer)) continue;
+//         if (!isValidMatch(candidate.want, startRequest.offer)) continue;
+
+//         const score1 = calculateMatchScoreWithSurprise(
+//             startRequest.want,
+//             startRequest.wantVector || [],
+//             candidate.offer,
+//             candidate.offerVector || []
+//         );
+
+//         const score2 = calculateMatchScoreWithSurprise(
+//             candidate.want,
+//             candidate.wantVector || [],
+//             startRequest.offer,
+//             startRequest.offerVector || []
+//         );
+
+//         if (score1 >= MIN_SCORE && score2 >= MIN_SCORE) {
+//             const avgScore = (score1 + score2) / 2;
+//             const key = [bondRequestId, candidate._id.toString()]
+//                 .sort()
+//                 .join('-');
+
+//             if (!globalSeen.has(key)) {
+//                 globalSeen.add(key);
+//                 matches.push({
+//                     ids: [bondRequestId, candidate._id.toString()],
+//                     score: avgScore,
+//                     type: getPairMatchType(candidate),
+//                 });
+//             }
+//         }
+//     }
+
+//     // 5️⃣ Build graph for cycles
+//     const requestMap = new Map<string, any>(
+//         candidates.map((c) => [c._id.toString(), c])
+//     );
+//     requestMap.set(bondRequestId, startRequest);
+
+//     const edges = new Map<string, { to: string; score: number }[]>();
+
+//     for (const [id, req] of requestMap.entries()) {
+//         edges.set(id, []);
+//         for (const [toId, toReq] of requestMap.entries()) {
+//             if (id === toId) continue;
+//             if (!isValidMatch(req.want, toReq.offer)) continue;
+
+//             const score = calculateMatchScoreWithSurprise(
+//                 req.want,
+//                 req.wantVector || [],
+//                 toReq.offer,
+//                 toReq.offerVector || []
+//             );
+
+//             if (score >= MIN_SCORE) {
+//                 edges.get(id)!.push({ to: toId, score });
+//             }
+//         }
+//     }
+
+//     // 6️⃣ Cycle type resolver (ignore start request)
+//     const getCycleMatchType = (path: string[]): MatchType => {
+//         let hasSurprise = false;
+
+//         for (const id of path) {
+//             if (id === bondRequestId) continue;
+
+//             const req = requestMap.get(id);
+//             const want = normalize(req?.want);
+//             const offer = normalize(req?.offer);
+
+//             if (want === 'empty' || offer === 'empty') return 'empty';
+//             if (want === 'surprise' || offer === 'surprise') hasSurprise = true;
+//         }
+
+//         return hasSurprise ? 'surprise' : 'entry';
+//     };
+
+//     // 7️⃣ DFS for cycles (3–5)
+//     const seenCycles = new Set<string>();
+
+//     const dfs = (
+//         startId: string,
+//         currentId: string,
+//         path: string[],
+//         accScore: number
+//     ) => {
+//         if (path.length > maxCycleSize) return;
+
+//         const usersInPath = new Set(
+//             path.map(
+//                 (id) =>
+//                     requestMap.get(id)?.user?.toString() ||
+//                     requestMap.get(id)?.user?._id?.toString()
+//             )
+//         );
+
+//         for (const { to, score } of edges.get(currentId) || []) {
+//             if (path.includes(to)) {
+//                 if (to === startId && path.length >= 3) {
+//                     const hash = path.join('-');
+//                     if (seenCycles.has(hash)) continue;
+//                     seenCycles.add(hash);
+
+//                     if (!globalSeen.has(hash)) {
+//                         globalSeen.add(hash);
+//                         matches.push({
+//                             ids: [...path],
+//                             score: accScore,
+//                             type: getCycleMatchType(path),
+//                         });
+//                     }
+//                 }
+//                 continue;
+//             }
+
+//             const nextReq = requestMap.get(to);
+//             const nextUser =
+//                 nextReq?.user?.toString() || nextReq?.user?._id?.toString();
+
+//             if (usersInPath.has(nextUser)) continue;
+
+//             dfs(startId, to, [...path, to], (accScore + score) / 2);
+//         }
+//     };
+
+//     dfs(bondRequestId, bondRequestId, [bondRequestId], 1);
+
+//     // 8️⃣ Populate results
+//     const allIds = [...new Set(matches.flatMap((m) => m.ids))];
+
+//     const populated = await BondRequest.find({ _id: { $in: allIds } })
+//         .select('-wantVector -offerVector')
+//         .populate({ path: 'user', select: 'name profile_image' })
+//         .lean();
+
+//     const populatedMap = new Map(populated.map((r) => [r._id.toString(), r]));
+
+//     // 9️⃣ SORT: size → type → score
+//     const typePriority: Record<MatchType, number> = {
+//         entry: 1,
+//         surprise: 2,
+//         empty: 3,
+//     };
+
+//     matches.sort((a, b) => {
+//         if (a.ids.length !== b.ids.length) {
+//             return a.ids.length - b.ids.length;
+//         }
+//         if (a.type !== b.type) {
+//             return typePriority[a.type] - typePriority[b.type];
+//         }
+//         return b.score - a.score;
+//     });
+
+//     const startIndex = (page - 1) * limit;
+
+//     const result = matches.slice(startIndex, startIndex + limit).map((m) => ({
+//         matchRequest: m.ids.map((id) => populatedMap.get(id)),
+//         matchScore: Number(m.score.toFixed(3)),
+//         type: m.type,
+//     }));
+
+//     return {
+//         total: Math.min(matches.length, 100),
+//         page,
+//         limit,
+//         data: result,
+//     };
+// };
+
 type MatchType = 'entry' | 'surprise' | 'empty';
 
 export const getMatchingBondRequest = async (
@@ -791,17 +1061,14 @@ export const getMatchingBondRequest = async (
     const normalize = (s?: string) => normalizeText(s);
     const isEmpty = (s?: string) => normalize(s) === 'empty';
 
-    // ✅ ENTRY > SURPRISE > EMPTY (candidate-only)
     const getPairMatchType = (candidate: any): MatchType => {
         const want = normalize(candidate.want);
         const offer = normalize(candidate.offer);
-
         if (want === 'empty' || offer === 'empty') return 'empty';
         if (want === 'surprise' || offer === 'surprise') return 'surprise';
         return 'entry';
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const isValidMatch = (want: string, offer: string) => true;
 
     // 1️⃣ Fetch start request
@@ -934,27 +1201,20 @@ export const getMatchingBondRequest = async (
         }
     }
 
-    // 6️⃣ Cycle type resolver (ignore start request)
     const getCycleMatchType = (path: string[]): MatchType => {
         let hasSurprise = false;
-
         for (const id of path) {
             if (id === bondRequestId) continue;
-
             const req = requestMap.get(id);
             const want = normalize(req?.want);
             const offer = normalize(req?.offer);
-
             if (want === 'empty' || offer === 'empty') return 'empty';
             if (want === 'surprise' || offer === 'surprise') hasSurprise = true;
         }
-
         return hasSurprise ? 'surprise' : 'entry';
     };
 
-    // 7️⃣ DFS for cycles (3–5)
     const seenCycles = new Set<string>();
-
     const dfs = (
         startId: string,
         currentId: string,
@@ -993,7 +1253,6 @@ export const getMatchingBondRequest = async (
             const nextReq = requestMap.get(to);
             const nextUser =
                 nextReq?.user?.toString() || nextReq?.user?._id?.toString();
-
             if (usersInPath.has(nextUser)) continue;
 
             dfs(startId, to, [...path, to], (accScore + score) / 2);
@@ -1002,7 +1261,7 @@ export const getMatchingBondRequest = async (
 
     dfs(bondRequestId, bondRequestId, [bondRequestId], 1);
 
-    // 8️⃣ Populate results
+    // 6️⃣ Populate results
     const allIds = [...new Set(matches.flatMap((m) => m.ids))];
 
     const populated = await BondRequest.find({ _id: { $in: allIds } })
@@ -1012,7 +1271,18 @@ export const getMatchingBondRequest = async (
 
     const populatedMap = new Map(populated.map((r) => [r._id.toString(), r]));
 
-    // 9️⃣ SORT: size → type → score
+    // 7️⃣ Generate color per pair (offer↔want)
+    const generateColorFromPair = (id1: string, id2: string) => {
+        let hash = 0;
+        const str = [id1, id2].sort().join('-');
+        for (let i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const c = (hash & 0x00ffffff).toString(16).toUpperCase();
+        return '#' + '00000'.substring(0, 6 - c.length) + c;
+    };
+
+    // 8️⃣ SORT: size → type → score
     const typePriority: Record<MatchType, number> = {
         entry: 1,
         surprise: 2,
@@ -1020,22 +1290,36 @@ export const getMatchingBondRequest = async (
     };
 
     matches.sort((a, b) => {
-        if (a.ids.length !== b.ids.length) {
-            return a.ids.length - b.ids.length;
-        }
-        if (a.type !== b.type) {
+        if (a.ids.length !== b.ids.length) return a.ids.length - b.ids.length;
+        if (a.type !== b.type)
             return typePriority[a.type] - typePriority[b.type];
-        }
         return b.score - a.score;
     });
 
     const startIndex = (page - 1) * limit;
 
-    const result = matches.slice(startIndex, startIndex + limit).map((m) => ({
-        matchRequest: m.ids.map((id) => populatedMap.get(id)),
-        matchScore: Number(m.score.toFixed(3)),
-        type: m.type,
-    }));
+    // 9️⃣ Map result with pair-specific color
+    const result = matches.slice(startIndex, startIndex + limit).map((m) => {
+        const requestsWithColors = m.ids.map((id, idx, arr) => {
+            let color = '#000000'; // fallback
+            if (arr.length === 2) {
+                color = generateColorFromPair(arr[0], arr[1]);
+            } else if (arr.length > 2) {
+                const nextId = arr[(idx + 1) % arr.length];
+                color = generateColorFromPair(id, nextId);
+            }
+            return {
+                ...populatedMap.get(id),
+                color,
+            };
+        });
+
+        return {
+            matchRequest: requestsWithColors,
+            matchScore: Number(m.score.toFixed(3)),
+            type: m.type,
+        };
+    });
 
     return {
         total: Math.min(matches.length, 100),
