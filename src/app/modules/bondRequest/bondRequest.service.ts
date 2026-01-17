@@ -1061,14 +1061,17 @@ export const getMatchingBondRequest = async (
     const normalize = (s?: string) => normalizeText(s);
     const isEmpty = (s?: string) => normalize(s) === 'empty';
 
+    // Determine match type for a pair
     const getPairMatchType = (candidate: any): MatchType => {
         const want = normalize(candidate.want);
         const offer = normalize(candidate.offer);
+
         if (want === 'empty' || offer === 'empty') return 'empty';
         if (want === 'surprise' || offer === 'surprise') return 'surprise';
         return 'entry';
     };
 
+    // Simple validity check (can be extended)
     const isValidMatch = (want: string, offer: string) => true;
 
     // 1️⃣ Fetch start request
@@ -1123,10 +1126,9 @@ export const getMatchingBondRequest = async (
         score: number;
         type: MatchType;
     }[] = [];
-
     const globalSeen = new Set<string>();
 
-    // 4️⃣ Pairwise (2-person) matches
+    // 4️⃣ Pairwise 2-person matches
     for (const candidate of candidates) {
         const startOfferEmpty = isEmpty(startRequest.offer);
         const startWantEmpty = isEmpty(startRequest.want);
@@ -1181,7 +1183,6 @@ export const getMatchingBondRequest = async (
     requestMap.set(bondRequestId, startRequest);
 
     const edges = new Map<string, { to: string; score: number }[]>();
-
     for (const [id, req] of requestMap.entries()) {
         edges.set(id, []);
         for (const [toId, toReq] of requestMap.entries()) {
@@ -1201,6 +1202,7 @@ export const getMatchingBondRequest = async (
         }
     }
 
+    // 6️⃣ Cycle match type
     const getCycleMatchType = (path: string[]): MatchType => {
         let hasSurprise = false;
         for (const id of path) {
@@ -1214,6 +1216,7 @@ export const getMatchingBondRequest = async (
         return hasSurprise ? 'surprise' : 'entry';
     };
 
+    // 7️⃣ DFS to find cycles
     const seenCycles = new Set<string>();
     const dfs = (
         startId: string,
@@ -1261,9 +1264,8 @@ export const getMatchingBondRequest = async (
 
     dfs(bondRequestId, bondRequestId, [bondRequestId], 1);
 
-    // 6️⃣ Populate results
+    // 8️⃣ Populate requests
     const allIds = [...new Set(matches.flatMap((m) => m.ids))];
-
     const populated = await BondRequest.find({ _id: { $in: allIds } })
         .select('-wantVector -offerVector')
         .populate({ path: 'user', select: 'name profile_image' })
@@ -1271,18 +1273,7 @@ export const getMatchingBondRequest = async (
 
     const populatedMap = new Map(populated.map((r) => [r._id.toString(), r]));
 
-    // 7️⃣ Generate color per pair (offer↔want)
-    const generateColorFromPair = (id1: string, id2: string) => {
-        let hash = 0;
-        const str = [id1, id2].sort().join('-');
-        for (let i = 0; i < str.length; i++) {
-            hash = str.charCodeAt(i) + ((hash << 5) - hash);
-        }
-        const c = (hash & 0x00ffffff).toString(16).toUpperCase();
-        return '#' + '00000'.substring(0, 6 - c.length) + c;
-    };
-
-    // 8️⃣ SORT: size → type → score
+    // 9️⃣ Sorting matches
     const typePriority: Record<MatchType, number> = {
         entry: 1,
         surprise: 2,
@@ -1298,24 +1289,37 @@ export const getMatchingBondRequest = async (
 
     const startIndex = (page - 1) * limit;
 
-    // 9️⃣ Map result with pair-specific color
-    const result = matches.slice(startIndex, startIndex + limit).map((m) => {
-        const requestsWithColors = m.ids.map((id, idx, arr) => {
-            let color = '#000000'; // fallback
-            if (arr.length === 2) {
-                color = generateColorFromPair(arr[0], arr[1]);
-            } else if (arr.length > 2) {
-                const nextId = arr[(idx + 1) % arr.length];
-                color = generateColorFromPair(id, nextId);
-            }
-            return {
-                ...populatedMap.get(id),
-                color,
-            };
-        });
+    // 10️⃣ Assign offer↔want pair colors
+    const generateColorFromPair = (offer: string, want: string) => {
+        let hash = 0;
+        const str = offer + '-' + want;
+        for (let i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const c = (hash & 0x00ffffff).toString(16).toUpperCase();
+        return '#' + '00000'.substring(0, 6 - c.length) + c;
+    };
 
+    const assignPairColors = (chain: any[]) => {
+        const n = chain.length;
+        for (let i = 0; i < n; i++) {
+            const current = chain[i];
+            const next = chain[(i + 1) % n]; // cycle connection
+            const color = generateColorFromPair(current.offer, next.want);
+
+            // assign to the matched pair
+            current.offerColor = color;
+            next.wantColor = color;
+        }
+        return chain;
+    };
+
+    // 11️⃣ Build final result with pair colors
+    const result = matches.slice(startIndex, startIndex + limit).map((m) => {
+        const chain = m.ids.map((id) => populatedMap.get(id));
+        const coloredChain = assignPairColors(chain);
         return {
-            matchRequest: requestsWithColors,
+            matchRequest: coloredChain,
             matchScore: Number(m.score.toFixed(3)),
             type: m.type,
         };
