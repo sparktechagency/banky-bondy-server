@@ -1,32 +1,22 @@
 /* eslint-disable no-useless-escape */
-/* eslint-disable no-unused-vars */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import OpenAI from 'openai';
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 });
 
-// ------------------------
-// Custom rules for fast checks
-// ------------------------
-
-// Money words and symbols
+// Custom rules
 const MONEY_REGEX =
-    /\b(?:usd|ars|eur|gbp|bdt|inr|jpy|cny|aud|cad|sgd|dollar|dollars|dólar|dólares|taka|takas|rupee|rupees|rupia|rupias|peso|pesos|yen|yenes|euro|euros|libra|libras|libras esterlinas|franco|francos|real|reais|koruna|krona|forint|lei|shekel|dirham|baht|ruble|rublo|sol|lira|dinero|moneda)\b|[\$\€\£\¥\₹\৳₽₩₺฿₪₫₴]/i;
+    /\b(?:usd|ars|eur|gbp|bdt|inr|jpy|cny|aud|cad|sgd|dollar|dollars|taka|rupee|peso|yen|euro|libra|franco|real|koruna|forint|lei|shekel|dirham|baht|ruble|sol|lira|moneda)\b|[\$\€\£\¥\₹\৳₽₩₺฿₪₫₴]/i;
 
-// Sexual/adult content
 const SEXUAL_REGEX = /\b(sex|porn|xxx|nude|erotic|adult|nsfw)\b/i;
-
-// Violence
 const VIOLENCE_REGEX =
     /\b(kill|murder|shoot|assault|bomb|attack|terrorist|abuse)\b/i;
+const HATE_REGEX = /\b(racist|hate|discriminate|kill [a-z]+|attack [a-z]+)\b/i;
 
-// Hate speech
-const HATE_REGEX = /\b(racist|hate|kill [a-z]+|attack [a-z]+|discriminate)\b/i;
+// Detect standalone numbers (potential money)
+const NUMBER_REGEX = /\b\d{2,}\b/; // 2 or more digits
 
-// Combine rules into an array
 const CUSTOM_RULES: { regex: RegExp; reason: string }[] = [
     { regex: MONEY_REGEX, reason: 'Money-related content is not allowed.' },
     { regex: SEXUAL_REGEX, reason: 'Sexual or adult content is not allowed.' },
@@ -38,48 +28,68 @@ const CUSTOM_RULES: { regex: RegExp; reason: string }[] = [
 ];
 
 /**
- * Checks if a given text is safe using OpenAI Moderation API + custom rules
+ * Check if text is safe
  */
 export async function isTextSafe(
     text: string
 ): Promise<{ safe: boolean; reason?: string }> {
     try {
-        // ------------------------
-        // Step 1: Apply custom rules
-        // ------------------------
+        // Step 1: Run custom rules for obvious forbidden words
         for (const rule of CUSTOM_RULES) {
             if (rule.regex.test(text)) {
                 return { safe: false, reason: rule.reason };
             }
         }
 
-        // ------------------------
-        // Step 2: OpenAI Moderation API
-        // ------------------------
-        const response = await openai.moderations.create({
+        // Step 2: Check numbers for potential money context
+        const numbers = text.match(NUMBER_REGEX);
+        if (numbers && numbers.length > 0) {
+            // Ask OpenAI if the text implies money
+            const moderationPrompt = `
+Does the following text imply money, payment, or currency? 
+If yes, flag it. 
+If no, allow it. Only numbers that clearly mean something else like "100 pieces" or "5000 meters" are allowed. 
+
+Text: "${text}"
+Answer "Yes" if money, "No" if not money.
+            `;
+
+            const response = await openai.chat.completions.create({
+                model: 'gpt-4o-mini',
+                messages: [{ role: 'user', content: moderationPrompt }],
+                temperature: 0,
+            });
+
+            const answer =
+                response.choices?.[0]?.message?.content?.trim().toLowerCase() ||
+                '';
+            if (answer.startsWith('yes')) {
+                return {
+                    safe: false,
+                    reason: 'Text contains potential money-related content.',
+                };
+            }
+        }
+
+        // Step 3: Run OpenAI moderation API for everything else (sexual, violence, hate, etc.)
+        const modResponse = await openai.moderations.create({
             model: 'omni-moderation-latest',
             input: text,
         });
 
-        const result = response.results?.[0];
-
+        const result = modResponse.results?.[0];
         if (result?.flagged) {
             const flaggedCategories = Object.entries(result.categories || {})
                 .filter(([_, flagged]) => flagged)
                 .map(([category]) => category.replace(/\//g, ' '))
                 .join(', ');
 
-            const readableReason = `Your text was flagged for potentially unsafe content related to: ${flaggedCategories}. Please revise your input.`;
-
             return {
                 safe: false,
-                reason: readableReason,
+                reason: `Text flagged for: ${flaggedCategories}.`,
             };
         }
 
-        // ------------------------
-        // Step 3: If passed all checks
-        // ------------------------
         return { safe: true };
     } catch (error: any) {
         console.error('Moderation API error:', error.message || error);
