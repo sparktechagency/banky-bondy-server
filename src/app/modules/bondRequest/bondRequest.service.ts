@@ -1046,6 +1046,367 @@ export const isHighConfidenceMatch = (score: number) => score >= 0.7;
 //     };
 // };
 
+// type MatchType = 'entry' | 'surprise' | 'empty';
+
+// // 🎨 Color palette generator
+// const generateColorPalette = (count: number): string[] => {
+//     const colors = [
+//         '#FF6B6B', // Red
+//         '#4ECDC4', // Teal
+//         '#45B7D1', // Blue
+//         '#FFA07A', // Light Salmon
+//         '#98D8C8', // Mint
+//         '#F7DC6F', // Yellow
+//         '#BB8FCE', // Purple
+//         '#85C1E2', // Sky Blue
+//         '#F8B88B', // Peach
+//         '#A8E6CF', // Light Green
+//         '#FFD93D', // Golden
+//         '#6BCF7F', // Green
+//         '#FF85A2', // Pink
+//         '#95E1D3', // Aqua
+//         '#F38181', // Coral
+//     ];
+
+//     // If we need more colors than our palette, generate random ones
+//     if (count > colors.length) {
+//         for (let i = colors.length; i < count; i++) {
+//             colors.push(
+//                 `#${Math.floor(Math.random() * 16777215)
+//                     .toString(16)
+//                     .padStart(6, '0')}`
+//             );
+//         }
+//     }
+
+//     return colors.slice(0, count);
+// };
+
+// // 🌈 Special colors for surprise and empty
+// const SPECIAL_COLORS = {
+//     surprise: '#FF6B9D', // Pink/Purple gradient color
+//     empty: '#E0E0E0', // Light gray
+// };
+
+// export const getMatchingBondRequest = async (
+//     userId: string,
+//     bondRequestId: string,
+//     query: Record<string, unknown>
+// ) => {
+//     const page = Number(query.page) || 1;
+//     const limit = Number(query.limit) || 10;
+//     const MIN_SCORE = 0.4;
+//     const maxCycleSize = 5;
+
+//     const normalize = (s?: string) => normalizeText(s);
+//     const isEmpty = (s?: string) => normalize(s) === 'empty';
+
+//     // ✅ ENTRY > SURPRISE > EMPTY (candidate-only)
+//     const getPairMatchType = (candidate: any): MatchType => {
+//         const want = normalize(candidate.want);
+//         const offer = normalize(candidate.offer);
+
+//         if (want === 'empty' || offer === 'empty') return 'empty';
+//         if (want === 'surprise' || offer === 'surprise') return 'surprise';
+//         return 'entry';
+//     };
+
+//     // eslint-disable-next-line @typescript-eslint/no-unused-vars
+//     const isValidMatch = (want: string, offer: string) => true;
+
+//     // 1️⃣ Fetch start request
+//     const startRequest = await BondRequest.findOne({
+//         _id: bondRequestId,
+//         user: userId,
+//         status: ENUM_BOND_REQUEST_STATUS.WAITING_FOR_LINK,
+//         isPause: false,
+//     })
+//         .select('offer want offerVector wantVector location radius user')
+//         .lean();
+
+//     if (!startRequest) throw new AppError(404, 'Bond request not found');
+
+//     // 2️⃣ Geo filter
+//     const geoFilter: any = {};
+//     if (startRequest.location && startRequest.radius) {
+//         const [lng, lat] = startRequest.location.coordinates;
+//         geoFilter.location = {
+//             $geoWithin: {
+//                 $centerSphere: [[lng, lat], startRequest.radius / 6371],
+//             },
+//         };
+//     }
+
+//     // 3️⃣ Fetch candidates
+//     const candidates = await BondRequest.aggregate([
+//         {
+//             $match: {
+//                 _id: { $ne: new mongoose.Types.ObjectId(bondRequestId) },
+//                 user: { $ne: new mongoose.Types.ObjectId(userId) },
+//                 status: ENUM_BOND_REQUEST_STATUS.WAITING_FOR_LINK,
+//                 isPause: false,
+//                 ...geoFilter,
+//             },
+//         },
+//         { $sample: { size: 150 } },
+//         {
+//             $project: {
+//                 _id: 1,
+//                 user: 1,
+//                 offer: 1,
+//                 want: 1,
+//                 offerVector: 1,
+//                 wantVector: 1,
+//             },
+//         },
+//     ]);
+
+//     const matches: {
+//         ids: string[];
+//         score: number;
+//         type: MatchType;
+//     }[] = [];
+
+//     const globalSeen = new Set<string>();
+
+//     // 4️⃣ Pairwise (2-person) matches
+//     for (const candidate of candidates) {
+//         const startOfferEmpty = isEmpty(startRequest.offer);
+//         const startWantEmpty = isEmpty(startRequest.want);
+//         const candidateOfferEmpty = isEmpty(candidate.offer);
+//         const candidateWantEmpty = isEmpty(candidate.want);
+
+//         if (
+//             (startOfferEmpty && !candidateWantEmpty) ||
+//             (startWantEmpty && !candidateOfferEmpty)
+//         ) {
+//             continue;
+//         }
+
+//         if (!isValidMatch(startRequest.want, candidate.offer)) continue;
+//         if (!isValidMatch(candidate.want, startRequest.offer)) continue;
+
+//         const score1 = calculateMatchScoreWithSurprise(
+//             startRequest.want,
+//             startRequest.wantVector || [],
+//             candidate.offer,
+//             candidate.offerVector || []
+//         );
+
+//         const score2 = calculateMatchScoreWithSurprise(
+//             candidate.want,
+//             candidate.wantVector || [],
+//             startRequest.offer,
+//             startRequest.offerVector || []
+//         );
+
+//         if (score1 >= MIN_SCORE && score2 >= MIN_SCORE) {
+//             const avgScore = (score1 + score2) / 2;
+//             const key = [bondRequestId, candidate._id.toString()]
+//                 .sort()
+//                 .join('-');
+
+//             if (!globalSeen.has(key)) {
+//                 globalSeen.add(key);
+//                 matches.push({
+//                     ids: [bondRequestId, candidate._id.toString()],
+//                     score: avgScore,
+//                     type: getPairMatchType(candidate),
+//                 });
+//             }
+//         }
+//     }
+
+//     // 5️⃣ Build graph for cycles
+//     const requestMap = new Map<string, any>(
+//         candidates.map((c) => [c._id.toString(), c])
+//     );
+//     requestMap.set(bondRequestId, startRequest);
+
+//     const edges = new Map<string, { to: string; score: number }[]>();
+
+//     for (const [id, req] of requestMap.entries()) {
+//         edges.set(id, []);
+//         for (const [toId, toReq] of requestMap.entries()) {
+//             if (id === toId) continue;
+//             if (!isValidMatch(req.want, toReq.offer)) continue;
+
+//             const score = calculateMatchScoreWithSurprise(
+//                 req.want,
+//                 req.wantVector || [],
+//                 toReq.offer,
+//                 toReq.offerVector || []
+//             );
+
+//             if (score >= MIN_SCORE) {
+//                 edges.get(id)!.push({ to: toId, score });
+//             }
+//         }
+//     }
+
+//     // 6️⃣ Cycle type resolver (ignore start request)
+//     const getCycleMatchType = (path: string[]): MatchType => {
+//         let hasSurprise = false;
+
+//         for (const id of path) {
+//             if (id === bondRequestId) continue;
+
+//             const req = requestMap.get(id);
+//             const want = normalize(req?.want);
+//             const offer = normalize(req?.offer);
+
+//             if (want === 'empty' || offer === 'empty') return 'empty';
+//             if (want === 'surprise' || offer === 'surprise') hasSurprise = true;
+//         }
+
+//         return hasSurprise ? 'surprise' : 'entry';
+//     };
+
+//     // 7️⃣ DFS for cycles (3–5)
+//     const seenCycles = new Set<string>();
+
+//     const dfs = (
+//         startId: string,
+//         currentId: string,
+//         path: string[],
+//         accScore: number
+//     ) => {
+//         if (path.length > maxCycleSize) return;
+
+//         const usersInPath = new Set(
+//             path.map(
+//                 (id) =>
+//                     requestMap.get(id)?.user?.toString() ||
+//                     requestMap.get(id)?.user?._id?.toString()
+//             )
+//         );
+
+//         for (const { to, score } of edges.get(currentId) || []) {
+//             if (path.includes(to)) {
+//                 if (to === startId && path.length >= 3) {
+//                     const hash = path.join('-');
+//                     if (seenCycles.has(hash)) continue;
+//                     seenCycles.add(hash);
+
+//                     if (!globalSeen.has(hash)) {
+//                         globalSeen.add(hash);
+//                         matches.push({
+//                             ids: [...path],
+//                             score: accScore,
+//                             type: getCycleMatchType(path),
+//                         });
+//                     }
+//                 }
+//                 continue;
+//             }
+
+//             const nextReq = requestMap.get(to);
+//             const nextUser =
+//                 nextReq?.user?.toString() || nextReq?.user?._id?.toString();
+
+//             if (usersInPath.has(nextUser)) continue;
+
+//             dfs(startId, to, [...path, to], (accScore + score) / 2);
+//         }
+//     };
+
+//     dfs(bondRequestId, bondRequestId, [bondRequestId], 1);
+
+//     // 8️⃣ Populate results
+//     const allIds = [...new Set(matches.flatMap((m) => m.ids))];
+
+//     const populated = await BondRequest.find({ _id: { $in: allIds } })
+//         .select('-wantVector -offerVector')
+//         .populate({ path: 'user', select: 'name profile_image' })
+//         .lean();
+
+//     const populatedMap = new Map(populated.map((r) => [r._id.toString(), r]));
+
+//     // 9️⃣ SORT: size → type → score
+//     const typePriority: Record<MatchType, number> = {
+//         entry: 1,
+//         surprise: 2,
+//         empty: 3,
+//     };
+
+//     matches.sort((a, b) => {
+//         if (a.ids.length !== b.ids.length) {
+//             return a.ids.length - b.ids.length;
+//         }
+//         if (a.type !== b.type) {
+//             return typePriority[a.type] - typePriority[b.type];
+//         }
+//         return b.score - a.score;
+//     });
+
+//     const startIndex = (page - 1) * limit;
+
+//     // 🎨 10️⃣ ASSIGN COLORS TO EACH MATCH
+//     const result = matches.slice(startIndex, startIndex + limit).map((m) => {
+//         const cycleSize = m.ids.length;
+//         const colors = generateColorPalette(cycleSize);
+
+//         const matchRequestsWithColors = m.ids.map((id, index) => {
+//             const request = populatedMap.get(id);
+//             if (!request) return null;
+
+//             const currentWant = normalize(request.want);
+//             const currentOffer = normalize(request.offer);
+
+//             // Next person in cycle (wraps around)
+//             const nextIndex = (index + 1) % cycleSize;
+//             const nextId = m.ids[nextIndex];
+//             const nextRequest = populatedMap.get(nextId);
+//             const nextOffer = normalize(nextRequest?.offer);
+
+//             // Previous person in cycle
+//             const prevIndex = (index - 1 + cycleSize) % cycleSize;
+//             const prevId = m.ids[prevIndex];
+//             const prevRequest = populatedMap.get(prevId);
+//             const prevWant = normalize(prevRequest?.want);
+
+//             // Assign colors based on matching connections
+//             let wantColor = colors[index];
+//             let offerColor = colors[(index - 1 + cycleSize) % cycleSize];
+
+//             // Handle "surprise" - use special color
+//             if (currentWant === 'surprise') {
+//                 wantColor = SPECIAL_COLORS.surprise;
+//             }
+//             if (currentOffer === 'surprise') {
+//                 offerColor = SPECIAL_COLORS.surprise;
+//             }
+
+//             // Handle "empty" - use special color
+//             if (currentWant === 'empty') {
+//                 wantColor = SPECIAL_COLORS.empty;
+//             }
+//             if (currentOffer === 'empty') {
+//                 offerColor = SPECIAL_COLORS.empty;
+//             }
+
+//             return {
+//                 ...request,
+//                 offerColor, // Color showing what this person offers
+//                 wantColor, // Color showing what this person wants
+//             };
+//         });
+
+//         return {
+//             matchRequest: matchRequestsWithColors,
+//             matchScore: Number(m.score.toFixed(3)),
+//             type: m.type,
+//         };
+//     });
+
+//     return {
+//         total: Math.min(matches.length, 100),
+//         page,
+//         limit,
+//         data: result,
+//     };
+// };
+
 type MatchType = 'entry' | 'surprise' | 'empty';
 
 // 🎨 Color palette generator
@@ -1341,7 +1702,7 @@ export const getMatchingBondRequest = async (
 
     const startIndex = (page - 1) * limit;
 
-    // 🎨 10️⃣ ASSIGN COLORS TO EACH MATCH
+    // 🎨 10️⃣ ASSIGN COLORS TO EACH MATCH (FIXED VERSION)
     const result = matches.slice(startIndex, startIndex + limit).map((m) => {
         const cycleSize = m.ids.length;
         const colors = generateColorPalette(cycleSize);
@@ -1353,42 +1714,37 @@ export const getMatchingBondRequest = async (
             const currentWant = normalize(request.want);
             const currentOffer = normalize(request.offer);
 
-            // Next person in cycle (wraps around)
-            const nextIndex = (index + 1) % cycleSize;
-            const nextId = m.ids[nextIndex];
-            const nextRequest = populatedMap.get(nextId);
-            const nextOffer = normalize(nextRequest?.offer);
-
-            // Previous person in cycle
+            // Previous person in cycle (who's want is satisfied by current person's offer)
             const prevIndex = (index - 1 + cycleSize) % cycleSize;
             const prevId = m.ids[prevIndex];
             const prevRequest = populatedMap.get(prevId);
             const prevWant = normalize(prevRequest?.want);
 
-            // Assign colors based on matching connections
+            // Assign base colors based on cycle position
             let wantColor = colors[index];
-            let offerColor = colors[(index - 1 + cycleSize) % cycleSize];
+            let offerColor = colors[prevIndex]; // Use previous person's color index
 
-            // Handle "surprise" - use special color
+            // 🎯 CORRECT LOGIC: Handle special cases
+
+            // 1. If CURRENT person WANTS "surprise" or "empty"
             if (currentWant === 'surprise') {
                 wantColor = SPECIAL_COLORS.surprise;
-            }
-            if (currentOffer === 'surprise') {
-                offerColor = SPECIAL_COLORS.surprise;
-            }
-
-            // Handle "empty" - use special color
-            if (currentWant === 'empty') {
+            } else if (currentWant === 'empty') {
                 wantColor = SPECIAL_COLORS.empty;
             }
-            if (currentOffer === 'empty') {
+
+            // 2. If PREVIOUS person WANTED "surprise" or "empty"
+            //    (which current person's offer is satisfying)
+            if (prevWant === 'surprise') {
+                offerColor = SPECIAL_COLORS.surprise;
+            } else if (prevWant === 'empty') {
                 offerColor = SPECIAL_COLORS.empty;
             }
 
             return {
                 ...request,
-                offerColor, // Color showing what this person offers
-                wantColor, // Color showing what this person wants
+                offerColor, // Color matching the want this offer satisfies
+                wantColor, // Color representing what this person wants
             };
         });
 
@@ -1406,6 +1762,7 @@ export const getMatchingBondRequest = async (
         data: result,
     };
 };
+
 const bondRequestService = {
     createBondRequestIntoDB,
     getAllBondRequests,
