@@ -1409,6 +1409,31 @@ export const isHighConfidenceMatch = (score: number) => score >= 0.7;
 
 type MatchType = 'entry' | 'surprise' | 'empty';
 
+// 🎨 Pre-defined color palette
+// const COLOR_PALETTE = [
+//     '#FF6B6B', // Red
+//     '#4ECDC4', // Teal
+//     '#45B7D1', // Blue
+//     '#FFA07A', // Light Salmon
+//     '#98D8C8', // Mint
+//     '#F7DC6F', // Yellow
+//     '#BB8FCE', // Purple
+//     '#85C1E2', // Sky Blue
+//     '#F8B88B', // Peach
+//     '#A8E6CF', // Light Green
+//     '#FFD93D', // Golden
+//     '#6BCF7F', // Green
+//     '#FF85A2', // Pink
+//     '#95E1D3', // Aqua
+//     '#F38181', // Coral
+// ];
+const COLOR_PALETTE = [
+    '#FF6B6B', // Red
+    '#4ECDC4', // Teal
+    '#45B7D1', // Blue
+    '#FFA07A', // Light Salmon
+    '#98D8C8', // Mint
+];
 // 🎨 Color palette generator
 const generateColorPalette = (count: number): string[] => {
     const colors = [
@@ -1705,7 +1730,9 @@ export const getMatchingBondRequest = async (
     // 🎨 10️⃣ ASSIGN COLORS TO EACH MATCH (FIXED VERSION)
     const result = matches.slice(startIndex, startIndex + limit).map((m) => {
         const cycleSize = m.ids.length;
-        const colors = generateColorPalette(cycleSize);
+        // const colors = generateColorPalette(cycleSize);
+
+        const colors = COLOR_PALETTE;
 
         const matchRequestsWithColors = m.ids.map((id, index) => {
             const request = populatedMap.get(id);
