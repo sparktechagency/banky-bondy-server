@@ -4,11 +4,9 @@ import httpStatus from 'http-status';
 import QueryBuilder from '../../builder/QueryBuilder';
 import config from '../../config';
 import AppError from '../../error/appError';
-import {
-    ENUM_PAYMENT_PURPOSE,
-    ENUM_PAYMENT_STATUS,
-} from '../../utilities/enum';
+import { ENUM_PAYMENT_PURPOSE } from '../../utilities/enum';
 import paypalClient from '../../utilities/paypal';
+import { ENUM_DONATE_STATUS } from './donate.enum';
 import { Donate } from './donate.model';
 const donate = async (userId: string, amount: number) => {
     const result = await Donate.create({ user: userId, amount: amount });
@@ -94,7 +92,7 @@ const donate = async (userId: string, amount: number) => {
 
 const getAllDonner = async (query: Record<string, unknown>) => {
     const resultQuery = new QueryBuilder(
-        Donate.find({ status: ENUM_PAYMENT_STATUS.PAID }).populate({
+        Donate.find({ status: ENUM_DONATE_STATUS.Paid }).populate({
             path: 'user',
         }),
         query
