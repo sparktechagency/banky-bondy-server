@@ -1427,12 +1427,19 @@ type MatchType = 'entry' | 'surprise' | 'empty';
 //     '#95E1D3', // Aqua
 //     '#F38181', // Coral
 // ];
+// const COLOR_PALETTE = [
+//     '#FF6B6B', // Red
+//     '#4ECDC4', // Teal
+//     '#45B7D1', // Blue
+//     '#FFA07A', // Light Salmon
+//     '#98D8C8', // Mint
+// ];
 const COLOR_PALETTE = [
-    '#FF6B6B', // Red
-    '#4ECDC4', // Teal
-    '#45B7D1', // Blue
-    '#FFA07A', // Light Salmon
-    '#98D8C8', // Mint
+    '#ea9999 ', // Red
+    '#b6d7a8', // Green
+    '#9fc5e8 ', // Blue
+    '#d5a6bd ', // Purple
+    '#ffe599 ', // Yellow
 ];
 // 🎨 Color palette generator
 const generateColorPalette = (count: number): string[] => {
